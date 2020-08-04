@@ -24,31 +24,48 @@ class DESolver:
         self._max_n_steps=100000
         self._t_start=0.
         self._t_end=1
+        
         self._rhs=None
         self._rhs_e=None
         self._rhs_i=None
         self._rhs_gint=None
-        self._current_method=None
-        self._solution=None
-        self._global_error=None
-
-        self._has_global_error=False
         
-        self._solution_aux=None
         self._r=None
         self._n=None
-        self._t=None
-        self._step=0
+        
+        
         self._Ystage=None
         self._function_context=None
         
         self._info=0
         self._method_set=[]
         self._methods={}
-        self._RegisterDefaultMethods()
+        
 
+
+        self.reset()
+
+
+
+        
+    def reset(self):
+        self._solved=False
+        self._step=0
         self._In=None
-  
+        self._t=None
+        self._global_error=None
+        self._has_global_error=False
+        self._current_method=None
+        self._setup = False
+        self._solution=None
+        self._solution_aux=None
+        self._t_trajectory=None
+        self._u_trajectory=None
+        self._epsilon_trajectory=None
+        self._epsilon_local_trajectory=None
+        self._u_high_trajectory=None
+        pass
+        
     def GenerateOrderTestGrid(self,NRuns,t_min,t_max,dt_min,dt_max):
         
         T_tot = float(t_max-t_min)
@@ -67,45 +84,49 @@ class DESolver:
         AllMethods_RK=Default_RK_Methods()
         for i in range(len(AllMethods_RK)):
             A_method=AllMethods_RK[i]
+            if(self._info==1): print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
             self._methods[A_method['name']]=A_method
             self._method_set.append(A_method['name'])
             
         AllMethods_ETRS=Default_ETRS_Methods()
         for i in range(len(AllMethods_ETRS)):
             A_method=AllMethods_ETRS[i]
+            if(self._info==1): print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
             self._methods[A_method['name']]=A_method
             self._method_set.append(A_method['name'])
             
         AllMethods_ARK=Default_ARK_Methods()
         for i in range(len(AllMethods_ARK)):
             A_method=AllMethods_ARK[i]
+            if(self._info==1): print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
             self._methods[A_method['name']]=A_method
             self._method_set.append(A_method['name'])
                     
         AllMethods_ESDIRK=Default_ESDIRK_Methods()
         for i in range(len(AllMethods_ESDIRK)):
             A_method=AllMethods_ESDIRK[i]
-            print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
+            if(self._info==1): print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
             self._methods[A_method['name']]=A_method
             self._method_set.append(A_method['name'])
 
         AllMethods_GLEE=Default_GLEE_Methods()
         for i in range(len(AllMethods_GLEE)):
             A_method=AllMethods_GLEE[i]
-            #print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
+            if(self._info==1): print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
             self._methods[A_method['name']]=A_method
             self._method_set.append(A_method['name'])
        
         AllMethods_IDE=Default_IDE_Methods()
         for i in range(len(AllMethods_IDE)):
             A_method=AllMethods_IDE[i]
+            if(self._info==1): print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
             self._methods[A_method['name']]=A_method
             self._method_set.append(A_method['name'])
 
         AllMethods_GLEE_EIMEX=Default_GLEE_EIMEX_Methods()
         for i in range(len(AllMethods_GLEE_EIMEX)):
             A_method=AllMethods_GLEE_EIMEX[i]
-            #print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
+            if(self._info==1): print('registering {:} of type {:}'.format(A_method['name'],A_method['type']))
             self._methods[A_method['name']]=A_method
             self._method_set.append(A_method['name'])
    
@@ -123,6 +144,7 @@ class DESolver:
         return u_out,J_out
     
     def setup(self):
+        self._RegisterDefaultMethods()
         self._step=0
         pass
     
@@ -137,7 +159,7 @@ class DESolver:
     def solve(self,u_ini=None):
         if(u_ini!=None):
             self.set_initial_solution(u_ini)
-        self.setup()
+        if(self._setup): self.setup()
         
         METHOD=self._methods[str(self._current_method)]
 
@@ -148,13 +170,13 @@ class DESolver:
             self.step()
             
             if(self._step==self._max_n_steps):
-                #print('Exit on exceeding the number of steps (step {:g} = max number of steps = {:g})'.format(self._step,self._max_n_steps))                      
+                print('Exit on exceeding the number of steps (step {:g} = max number of steps = {:g})'.format(self._step,self._max_n_steps))                      
                 break
             if(self._t>=self._t_end):
-                #print('Exit on exceeding the duration (current time {:g} >= tend = {:g})'.format(self._t,self._t_end))
+                print('Exit on exceeding the duration (current time {:g} >= tend = {:g})'.format(self._t,self._t_end))
                 break
                 
-        
+        self._solved=True
         return 0
     
     def step(self):
@@ -672,9 +694,13 @@ class DESolver:
         self._dt=dt
         
         self._t=self._t_start
+
+        self._max_n_steps=1+int((self._t_end-self._t_start)/self._dt)
+        
         if(self._keep_history==True):
-            self._t_trajectory=np.zeros((self._n,1),dtype=np.float64)
-            self._t_trajectory=self._t_start
+            #self._t_trajectory=np.zeros((self._n,1),dtype=np.float64)
+            self._t_trajectory=np.zeros((1,),dtype=np.float64)
+            self._t_trajectory[0]=self._t_start
             
             
         
@@ -706,7 +732,7 @@ class DESolver:
             self._epsilon_trajectory=np.zeros((self._n,1),dtype=self._function_context['data-type'])
             self._epsilon_local_trajectory=np.zeros((self._n,1),dtype=self._function_context['data-type'])
             self._u_high_trajectory=np.zeros((self._n,1),dtype=self._function_context['data-type'])
-        
+            self._u_high_trajectory[0:self._n,0]=U0
     def get_solution(self):
         return self._solution.copy()
 
@@ -728,17 +754,48 @@ class DESolver:
         self._function_context=function_ctx
         return 0
     
-    def get_trajectory(self):
+    def get_trajectory(self,time_points=None):
+        if not self._solved:
+            print("Warning: problem not solved")
         if(self._keep_history==True):
-            return self._t_trajectory.copy(),self._u_trajectory.copy()
+            if(time_points is None):
+                return self._t_trajectory.copy(),self._u_trajectory.copy()
+            else:
+                finterp = scipy.interpolate.interp1d(self._t_trajectory, self._u_trajectory,axis=1)
+                u_trajectory = finterp(time_points)
+                return time_points,u_trajectory
         else:
             return None,None
-    def get_trajectory_GLEE(self):
+        
+    def get_trajectory_GLEE(self,time_points=None):
+        if not self._solved:
+            print("Warning: problem not solved")
+        tt=None
+        uu=None
+        ee=None
+        el=None
+        uh=None
         if(self._keep_history==True):
-            if(self._has_global_error==True):
-                return self._t_trajectory.copy(),self._u_trajectory.copy(),self._epsilon_trajectory,self._epsilon_local_trajectory,self._u_high_trajectory
+            if(time_points is None):
+                tt=self._t_trajectory.copy()
+                uu=self._u_trajectory.copy()
             else:
-                return self._t_trajectory.copy(),self._u_trajectory.copy(),None,None,None
-        else:
-            return None,None,None,None,None
+                finterp = scipy.interpolate.interp1d(self._t_trajectory, self._u_trajectory,axis=1)
+                u_trajectory = finterp(time_points)
+                tt=time_points
+                uu=u_trajectory
+            if(self._has_global_error==True):
+                if(time_points is None):
+                    tt=self._t_trajectory.copy()
+                    ee=self._epsilon_trajectory.copy()
+                    el=self._epsilon_local_trajectory.copy()
+                    uh=self._u_high_trajectory.copy()
+                else:
+                    finterp = scipy.interpolate.interp1d(self._t_trajectory, self._epsilon_trajectory ,axis=1)
+                    ee = finterp(time_points)
+                    finterp = scipy.interpolate.interp1d(self._t_trajectory, self._epsilon_local_trajectory ,axis=1)
+                    el = finterp(time_points)
+                    finterp = scipy.interpolate.interp1d(self._t_trajectory,  self._u_high_trajectory,axis=1)
+                    uh = finterp(time_points)
+        return tt,uu,ee,el,uh
         
