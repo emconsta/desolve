@@ -13,7 +13,7 @@ from methods_ide import Default_IDE_Methods
 
 class DESolver:
     """
-    Simple time-integration schemes. This includes:
+    Time-integration schemes. This includes:
         - FE: Forward uler.
         - RK4: Runge-Kutta
         - RK2a: Runge-Kutta
@@ -304,7 +304,7 @@ class DESolver:
                 q_out[0:n, 1]-(gamma/(1-gamma))*q_out[0:n, 0]
             self._epsilon = (1./(1.-gamma))*(q_out[0:n, 1]-q_out[0:n, 0])
             self._epsilon_local = (
-                1./(1.-gamma))*(q_out[0:n, 1]-q_out[0:n, 0])-(1/(1-gamma))*(q_out[0:n, 1]-q_out[0:n, 0])
+                1./(1.-gamma))*(q_out[0:n, 1]-q_out[0:n, 0])-(1./(1.-gamma))*(q_in[0:n, 1]-q_in[0:n, 0])
             self._global_error = self._epsilon
 
         elif(METHOD['type'] == 'GLEE-EIMEX'):
@@ -406,7 +406,7 @@ class DESolver:
                 q_out[0:n, 1]-(gamma/(1-gamma))*q_out[0:n, 0]
             self._epsilon = (1./(1.-gamma))*(q_out[0:n, 1]-q_out[0:n, 0])
             self._epsilon_local = (
-                1./(1.-gamma))*(q_out[0:n, 1]-q_out[0:n, 0])-(1/(1-gamma))*(q_out[0:n, 1]-q_out[0:n, 0])
+                1./(1.-gamma))*(q_out[0:n, 1]-q_out[0:n, 0])-(1/(1-gamma))*(q_in[0:n, 1]-q_in[0:n, 0])
 
             self._global_error = self._epsilon
 
