@@ -414,11 +414,12 @@ class Barnes:
         u_out=np.zeros((2,))
         u_out[0]=p1*u_in[0]-p2*u_in[0]*u_in[1]
         u_out[1]=p2*u_in[0]*u_in[1]-p3*u_in[1]
+        
         j_out=np.zeros((2,2))
         j_out[0,0]=p1-p2*u_in[1]
         j_out[0,1]=-p2*u_in[0]
-        j_out[1,0]=p2
-        j_out[0,1]=p2*u_in[1]-p3
+        j_out[1,0]=p2*u_in[1]
+        j_out[0,1]=p2*u_in[0]-p3
         return u_out,j_out
 
     def initial_solution(self):
