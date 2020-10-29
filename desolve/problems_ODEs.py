@@ -21,7 +21,11 @@ def ProblemsODE(name,problem_ctx=None):
     elif re.match(r'\AKulikov-IV\Z',name,re.IGNORECASE):
         problem = Kulikov_IV(problem_ctx)
     elif re.match(r'\ABarnes\Z',name,re.IGNORECASE):
-        problem = Barnes(problem_ctx)      
+        problem = Barnes(problem_ctx)
+    elif re.match(r'\ALorenz\Z',name,re.IGNORECASE):
+        problem = Lorenz(problem_ctx)
+    elif re.match(r'\ALorenz96\Z',name,re.IGNORECASE):
+        problem = Lorenz96(problem_ctx)   
     else:
         raise NameError('Problem {:} has not been found.'.format(name))
     
@@ -257,9 +261,110 @@ class vdP:
     def get_problem_setup(self):
         return (self.problem_setup)
 
+class Lorenz96:
+    def __init__(self,problem_ctx=None):
+        
+        self.rhs_i=None
+        self.exact_solution=None
+        
+        if(problem_ctx is None):
+            ctx={'m': 40,'F':8}
+        else:
+            ctx={'m': problem_ctx['m'],'F': problem_ctx['F']}
+
+        m=ctx['m']
+
+        self.u_ini=np.zeros((m))
+        self.u_ini[:]=0.
+            
+        problem_setup={}
+        problem_setup['context']=ctx
+        problem_setup['context']['data-type']=np.float64
+        problem_setup['name']='Lorenz 96'
+        problem_setup['DT']=0.05
+        problem_setup['DT_REFERENCE']=1.0e-04
+        problem_setup['T_DURATION']={'start':0.,'end':10.}
+        problem_setup['DT_INTERVAL']={'start':1e-02,'end':1e-01}
+
+        self.problem_setup=problem_setup
+        
+    def rhs_e(self,t,u_in,ctx=None):
+        m=ctx['m']
+        F=ctx['F']
+        
+        u_out=np.zeros((m,))
+        u_out[0] = (u_in[1]-u_in[m-2])*u_in[m-1] - u_in[0]
+        u_out[1] = (u_in[2]-u_in[m-1])*u_in[0]   - u_in[1]
+        for i in range(2,m-2):
+            u_out[i]=(u_in[i+1]-u_in[i-2])*u_in[i-1] - u_in[i]
+        u_out[m-2]=(u_in[m-1]-u_in[m-4])*u_in[m-3] - u_in[m-2]
+        u_out[m-1]=(u_in[0]  -u_in[m-3])*u_in[m-2] - u_in[m-1]
+        u_out=u_out+F
+        
+        j_out=None#np.zeros((m,m))
+        
+        return u_out,j_out
+ 
+    def initial_solution(self):
+        return (self.u_ini)
     
+    def get_problem_setup(self):
+        return (self.problem_setup)    
     
+class Lorenz:
+    def __init__(self,problem_ctx=None):
+        
+        self.rhs_i=None
+        self.exact_solution=None
+        
+        if(problem_ctx is None):
+            ctx={'sigma': 10.,'rho':28.,'beta':8./3.}
+        else:
+            ctx={'sigma': problem_ctx['sigma'],'rho': problem_ctx['rho'],'beta': problem_ctx['beta']}
+
+        self.u_ini=np.zeros((3))
+        self.u_ini[:]=1.
+            
+        problem_setup={}
+        problem_setup['context']=ctx
+        problem_setup['context']['data-type']=np.float64
+        problem_setup['name']='Lorenz'
+        problem_setup['DT']=0.1
+        problem_setup['DT_REFERENCE']=1.0e-04
+        problem_setup['T_DURATION']={'start':0.,'end':50.}
+        problem_setup['DT_INTERVAL']={'start':1e-02,'end':1e-01}
+
+        self.problem_setup=problem_setup
+        
+    def rhs_e(self,t,u_in,ctx=None):
+        sigma=ctx['sigma']
+        rho=ctx['rho']
+        beta=ctx['beta']
+        
+        u_out=np.zeros((3,))
+        u_out[0] = sigma*(u_in[1]-u_in[0]) # sigma*(y-x);
+        u_out[1] = rho * u_in[0] - u_in[1] - u_in[0]*u_in[2] # rho*x - y - x*z;
+        u_out[2] = u_in[0]*u_in[1] - beta * u_in[2] # x*y - beta*z;
+        
+        j_out=np.zeros((3,3))
+        j_out[0,0]=-sigma
+        j_out[0,1]=sigma
+
+        j_out[1,0]=rho-u_in[2]
+        j_out[1,1]=-1
+        j_out[1,2]=-u_in[0]
+
+        j_out[2,0]=u_in[1]
+        j_out[2,1]=u_in[0]
+        j_out[2,2]=-beta
+        
+        return u_out,j_out
+ 
+    def initial_solution(self):
+        return (self.u_ini)
     
+    def get_problem_setup(self):
+        return (self.problem_setup)    
 class Kulikov_III:
     def __init__(self,problem_ctx=None):
     

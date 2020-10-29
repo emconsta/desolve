@@ -43,7 +43,7 @@ class DESolver:
 
         self.reset()
 
-    def reset(self):
+    def reset(self,soft=False):
         self._solved = False
         self._step = 0
         self._In = None
@@ -60,7 +60,7 @@ class DESolver:
         self._epsilon_local_trajectory = None
         self._u_high_trajectory = None
         pass
-
+    
     def GenerateOrderTestGrid(self, NRuns, t_min, t_max, dt_min, dt_max):
 
         T_tot = float(t_max-t_min)
@@ -152,9 +152,10 @@ class DESolver:
 
         return u_out, J_out
 
-    def setup(self):
+    def setup(self,keep_history=True):
         self._RegisterDefaultMethods()
         self._step = 0
+        self._keep_history=keep_history
         pass
 
     def GLEE_Starting_Procedure(self):
@@ -789,6 +790,12 @@ class DESolver:
         else:
             raise NotImplemented
 
+    def get_method(self):
+        if(self._current_method is None):
+            return None
+        else:
+            return self._methods[str(self._current_method)]
+        
     def get_method_name(self):
         return self._current_method
 
