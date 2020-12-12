@@ -80,9 +80,15 @@ class Advection1D:
         problem_setup['DT_INTERVAL']={'start':1e-03,'end':1e-01}
 
         u_ini_pde=np.zeros((n,mx),problem_setup['context']['data-type'])
-        u_ini_pde[0,:]=1.
-        u_ini_pde[0,mx//2-10:mx//2+10]=0.5
-       
+
+
+        #u_ini_pde[0,:]=1.
+        #u_ini_pde[0,mx//3:2*mx//3]=0.5
+        u_ini_pde[0,:]=1.0+0.5*np.sin(2*np.pi*x_coord)
+
+
+        
+        
         self.u_ini=self.vectorize(u_ini_pde,problem_ctx)
         problem_setup['context']['u_ini']=self.u_ini
         self.problem_setup=problem_setup
@@ -96,6 +102,7 @@ class Advection1D:
         mx=ctx['mx']
         dx=ctx['dx']
         c=ctx['Flux_c']
+        
         F=np.zeros((n,mx+1),ctx['data-type'])
         Flux=np.zeros((n,mx),ctx['data-type'])
         
@@ -104,10 +111,10 @@ class Advection1D:
         F[:,0]=c*y[:,-1]
         for id_mx in range(1,mx):
             F[:,id_mx]=c*y[:,id_mx-1]
-        F[:,id_mx]=c*y[:,0]
+        F[:,mx]=c*y[:,mx-1]
         
         for id_mx in range(0,mx):
-            Flux[:,id_mx]=dx*(F[:,id_mx+1]-F[:,id_mx])        
+            Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
         
         u_out=vec(Flux,ctx)
         
