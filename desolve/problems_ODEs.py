@@ -125,6 +125,7 @@ class ProtheroRobinson:
             ctx={'Epsilon': -2.0e+6}
         else:
             ctx={'Epsilon': problem_ctx['Epsilon']}
+        problem_setup['name']='Prothero-Robinson'
         problem_setup['context']=ctx
         problem_setup['context']['data-type']=np.float64
         problem_setup['DT']=1.0e-02
@@ -376,9 +377,10 @@ class Kulikov_III:
             ctx={'Lambda': 1.0e+6}
         else:
             ctx={'Lambda': problem_ctx['Lambda']}
+        problem_setup['name']='Kulikov-III'
         problem_setup['context']=ctx
         problem_setup['context']['data-type']=np.float64
-        problem_setup['DT']=1.0e-01
+        problem_setup['DT']=1.0e-02
         problem_setup['DT_REFERENCE']=1.0e-04
         problem_setup['T_DURATION']={'start':0.,'end':10}
         problem_setup['DT_INTERVAL']={'start':0.001,'end':0.01}
@@ -389,7 +391,7 @@ class Kulikov_III:
     def rhs_e(self,t,u_in,ctx=None):
         Lambda=ctx['Lambda']
         u_out=np.zeros((1,))
-        u_out=Lambda*(np.sin(4.*t)-u_in[0])+4.*np.cos(4.*t)
+        u_out[0]=Lambda*(np.sin(4.*t)-u_in[0])+4.*np.cos(4.*t)
         j_out=np.zeros((1,1))
         j_out[0,0]=-Lambda
         return u_out,j_out
