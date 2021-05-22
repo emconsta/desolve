@@ -228,6 +228,7 @@ class vdP:
             ctx={'Epsilon': problem_ctx['Epsilon']}
 
         problem_setup={}
+        problem_setup['name']='van der Pol'
         problem_setup['context']=ctx
         problem_setup['context']['data-type']=np.float64
         problem_setup['DT']=1.0e-03

@@ -9,7 +9,8 @@ from methods_esdirk import Default_ESDIRK_Methods
 from methods_glee import Default_GLEE_Methods
 from methods_glee_eimex import Default_GLEE_EIMEX_Methods
 from methods_ide import Default_IDE_Methods
-
+from methods_mrk import Default_MRK_Methods
+from methods_imex_mrk import Default_IMEX_MRK_Methods
 
 class DESolver:
     """
@@ -27,6 +28,9 @@ class DESolver:
         self._t_end = 1
 
         self._rhs = None
+        self._rhs_fast = None
+        self._rhs_slow = None
+        self._rhs_mr_implicit = None
         self._rhs_e = None
         self._rhs_i = None
         self._rhs_gint = None
@@ -140,6 +144,27 @@ class DESolver:
             self._methods[A_method['name']] = A_method
             self._method_set.append(A_method['name'])
 
+
+        AllMethods_MRK = Default_MRK_Methods()
+        for i in range(len(AllMethods_MRK)):
+            A_method = AllMethods_MRK[i]
+            if(self._info >= 1):
+                print('registering {:} of type {:}'.format(
+                    A_method['name'], A_method['type']))
+            self._methods[A_method['name']] = A_method
+            self._method_set.append(A_method['name'])
+
+            
+
+        AllMethods_IMEX_MRK = Default_IMEX_MRK_Methods()
+        for i in range(len(AllMethods_IMEX_MRK)):
+            A_method = AllMethods_IMEX_MRK[i]
+            if(self._info >= 1):
+                print('registering {:} of type {:}'.format(
+                    A_method['name'], A_method['type']))
+            self._methods[A_method['name']] = A_method
+            self._method_set.append(A_method['name'])
+            
     def _compound_imex_rhs(self, tt, uu, ctx=None):
 
         u_ex, J_ex = self._rhs_e(tt, uu, self._function_context)
@@ -505,6 +530,207 @@ class DESolver:
             # for i in range(s):
             u_out = u_out+dt*0.5*Kstage[0:n, 0]+dt*0.5*Kstage[0:n, 1]
 
+        elif(METHOD['type'] == 'MRK'):
+            AS = METHOD['AB']
+            bS = METHOD['bB']
+            cS = METHOD['cB']
+            sS = METHOD['sB']
+
+            AF = METHOD['AF']
+            bF = METHOD['bF']
+            cF = METHOD['cF']
+            sF = METHOD['sF']
+
+            AS = METHOD['AS']
+            bS = METHOD['bS']
+            cS = METHOD['cS']
+            sS = METHOD['sS']
+
+            uF_in,uS_in=self._function_context['SplitSolution'](u_in)
+
+            nF=self._function_context['nF']
+            nS=self._function_context['nS']
+            
+            YstageF = np.zeros(
+                (nF, sF), dtype=self._function_context['data-type'])
+            KstageF = np.zeros(
+                (nF, sF), dtype=self._function_context['data-type'])
+
+            YstageS = np.zeros(
+                (nS, sS), dtype=self._function_context['data-type'])
+            KstageS = np.zeros(
+                (nS, sS), dtype=self._function_context['data-type'])
+
+            for istage in range(sF):
+                YstageF[0:nF, istage] = uF_in
+                YstageS[0:nS, istage] = uS_in
+                
+                for jstage in range(sF):
+                    YstageF[0:nF, istage] = YstageF[0:nF, istage] + \
+                        dt*AF[istage, jstage]*KstageF[0:nF, jstage]
+                    YstageS[0:nS, istage] = YstageS[0:nS, istage] + \
+                        dt*AS[istage, jstage]*KstageS[0:nS, jstage]
+
+                t_stageF = t+cF[istage]*dt
+                t_stageS = t+cS[istage]*dt
+
+                KstageF[0:nF, istage], _ = self._rhs_fast(
+                    t_stageF, YstageS[0:nS, istage], YstageF[0:nF, istage], self._function_context)
+                KstageS[0:nS, istage], _ = self._rhs_slow(
+                    t_stageS, YstageS[0:nS, istage], YstageF[0:nF, istage], self._function_context)
+
+            uF_out = uF_in.copy()
+            uS_out = uS_in.copy()
+
+            for i in range(sF):
+                uF_out = uF_out+dt*bF[i]*KstageF[0:nF, i]
+            for i in range(sS):
+                uS_out = uS_out+dt*bS[i]*KstageS[0:nS, i]
+            
+            u_out=self._function_context['MergeSolution'](uF_out,uS_out)
+
+
+
+        elif(METHOD['type'] == 'IMEX-MRK'):
+            AS = METHOD['AB']
+            bS = METHOD['bB']
+            cS = METHOD['cB']
+            sS = METHOD['sB']
+
+            AF = METHOD['AF']
+            bF = METHOD['bF']
+            cF = METHOD['cF']
+            sF = METHOD['sF']
+
+            AS = METHOD['AS']
+            bS = METHOD['bS']
+            cS = METHOD['cS']
+            sS = METHOD['sS']
+
+            AT = METHOD['AT']
+            bT = METHOD['bT']
+            cT = METHOD['cT']
+            sT = METHOD['sT']
+            
+            uF_in,uS_in=self._function_context['SplitSolution'](u_in)
+
+            nF=self._function_context['nF']
+            nS=self._function_context['nS']
+            
+            YstageF = np.zeros(
+                (nF, sF), dtype=self._function_context['data-type'])
+            KstageF = np.zeros(
+                (nF, sF), dtype=self._function_context['data-type'])
+
+            YstageS = np.zeros(
+                (nS, sS), dtype=self._function_context['data-type'])
+            KstageS = np.zeros(
+                (nS, sS), dtype=self._function_context['data-type'])
+
+            #This is for the implicit part
+            YstageG = np.zeros(
+                (n, sT), dtype=self._function_context['data-type'])
+            KstageG = np.zeros(
+                (n, sT), dtype=self._function_context['data-type'])
+
+            assert sF==sS, "Slow and fast methods should have the same number of stages"
+
+            assert nF+nS==n, "Spatial partitioning is not consistent"
+            
+            for istage in range(sF):
+                YstageF[0:nF, istage] = uF_in.copy()
+                YstageS[0:nS, istage] = uS_in.copy()
+                
+                for jstage in range(sF):
+                    YstageF[0:nF, istage] = YstageF[0:nF, istage] + \
+                        dt*AF[istage, jstage]*KstageF[0:nF, jstage]
+                    YstageS[0:nS, istage] = YstageS[0:nS, istage] + \
+                        dt*AS[istage, jstage]*KstageS[0:nS, jstage]
+
+                print("Before YStage: {:}  {:}".format(YstageF[0:2, istage],YstageS[0:2, istage]))
+                    
+                #The implicit part (explicit portion)
+                YstageG[0:n, istage] = self._function_context['MergeSolution'](YstageF[0:nF, istage],YstageS[0:nS, istage])
+
+                print("Sanity check (before stage): ||YG-u_in|| = {:}".format(np.linalg.norm(np.squeeze(YstageG[0:n, istage])-u_in)))
+                print("Stage {:}:".format(istage))
+                for jstage in range(istage):
+                    print("YG_{:} += AT[{:},{:}] * dt * KG_{:} (AT = {:})".format(istage,istage,jstage,jstage,AT[istage, jstage]))
+                    YstageG[0:n, istage] = YstageG[0:n, istage] + \
+                        dt*AT[istage, jstage]*KstageG[0:n, jstage]
+            
+                
+                if(AT[istage, istage] == 0):
+                    #This stage is explicit
+                    pass
+                else:
+                    print("Stage {:} is implicit: AT[{:},:]={:}".format(istage,istage,AT[istage, :]))
+                    def IMEX_Function(X, *data):
+                        alpha = data[0]
+                        t_stage_in = data[1]
+                        Res_in = data[2]
+                        f, _ = self._rhs_mr_implicit(
+                            t_stage_in, X, self._function_context)
+                        F = X-alpha*f-Res_in
+                        return F
+
+                    def IMEX_Function_Jac(X, *data):
+                        alpha = data[0]
+                        t_stage_in = data[1]
+                        Res_in = data[2]
+                        f, Jac = self._rhs_mr_implicit(
+                            t_stage_in, X, self._function_context)
+                        J = np.eye(Jac.shape[0])-alpha*Jac
+                        return J
+
+                    
+                    t_stageI = t+cT[istage]*dt
+                    Res=YstageG[0:n, istage].copy()
+                    params = (dt*AT[istage, istage], t_stageI, Res)
+                    x=IMEX_Function(u_in,*params)
+                    print("X  in: {:}".format(np.linalg.norm(x)))
+                    sol_f = fsolve(
+                            func=IMEX_Function, fprime=IMEX_Function_Jac, x0=u_in, args=params, xtol=1.0e-12)
+                    YstageG[0:n, istage] = sol_f.copy()
+                    x=IMEX_Function(YstageG[0:n, istage],*params)
+                    print("X out: {:}".format(np.linalg.norm(x)))
+
+
+                
+                t_stageI = t+cT[istage]*dt
+
+                print("Eval: KG_{:} = g({:},YG{:})".format(istage,t_stageI,istage))
+                KstageG[0:n, istage], _ = self._rhs_mr_implicit(
+                    t_stageI, YstageG[0:n, istage], self._function_context)
+                
+                YstageF[0:nF, istage], YstageS[0:nS, istage] = self._function_context['SplitSolution'](YstageG[0:n, istage])
+                print("After  YStage: {:}  {:}".format(YstageF[0:2, istage],YstageS[0:2, istage]))
+                
+                t_stageF = t+cF[istage]*dt
+                t_stageS = t+cS[istage]*dt
+
+                KstageF[0:nF, istage], _ = self._rhs_fast(
+                    t_stageF, YstageS[0:nS, istage], YstageF[0:nF, istage], self._function_context)
+                KstageS[0:nS, istage], _ = self._rhs_slow(
+                    t_stageS, YstageS[0:nS, istage], YstageF[0:nF, istage], self._function_context)
+
+                print('Norms: K={:} KF={:} KS={:}'.format(np.linalg.norm(np.squeeze(KstageG[0:n, istage])),np.linalg.norm(np.squeeze(KstageF[0:nF, istage])),np.linalg.norm(np.squeeze(KstageS[0:nF, istage]))))
+            uF_out = uF_in.copy()
+            uS_out = uS_in.copy()
+
+            for i in range(sF):
+                uF_out = uF_out+dt*bF[i]*KstageF[0:nF, i]
+            for i in range(sS):
+                uS_out = uS_out+dt*bS[i]*KstageS[0:nS, i]
+            
+            u_out=self._function_context['MergeSolution'](uF_out,uS_out)
+
+            print("*Sanity check (before implicit stage): ||u_out-u_in|| = {:}".format(np.linalg.norm(u_out-u_in)))
+            
+            for i in range(sT):
+                print("u_out += bT[{:}] * dt * KG_{:} (bT = {:})".format(i,i,bT[i]))
+                u_out = u_out+dt*bT[i]*KstageG[0:n, i]
+            
         elif(METHOD['type'] == 'RK'):
             A = METHOD['A']
             b = METHOD['b']
@@ -685,6 +911,8 @@ class DESolver:
             bt = METHOD['bt']
             ct = METHOD['ct']
             s = METHOD['s']
+
+            print(At,bt)
             Ystage = np.zeros(
                 (n, s), dtype=self._function_context['data-type'])
             KstageE = np.zeros(
@@ -693,7 +921,8 @@ class DESolver:
                 (n, s), dtype=self._function_context['data-type'])
 
             for istage in range(s):
-                t_stage = t+c[istage]*dt
+                t_stageE = t+c[istage]*dt
+                t_stageI = t+ct[istage]*dt
                 Res = u_in
                 for jstage in range(istage+1):
                     Res = Res+dt*A[istage, jstage]*KstageE[0:n, jstage] + \
@@ -719,18 +948,24 @@ class DESolver:
                         J = np.eye(Jac.shape[0])-alpha*Jac
                         return J
 
-                    params = (dt*At[istage, istage], t_stage, Res)
-                    # x,_=IMEX_Function(X,*params)
+                    params = (dt*At[istage, istage], t_stageI, Res)
+                    x=IMEX_Function(u_in,*params)
+                    print("X  in: {:}".format(np.linalg.norm(x)))
                     Ystage[0:n, istage] = fsolve(
                         func=IMEX_Function, fprime=IMEX_Function_Jac, x0=u_in, args=params)
-
+                    x=IMEX_Function(Ystage[0:n, istage],*params)
+                    print("X out: {:}".format(np.linalg.norm(x)))
+                    
                 KstageE[0:n, istage], _ = self._rhs_e(
-                    t_stage, Ystage[0:n, istage], self._function_context)
+                    t_stageE, Ystage[0:n, istage], self._function_context)
                 KstageI[0:n, istage], _ = self._rhs_i(
-                    t_stage, Ystage[0:n, istage], self._function_context)
+                    t_stageI, Ystage[0:n, istage], self._function_context)
 
             u_out = u_in.copy()
+            
             for i in range(s):
+                print('Norm of KE_{:}={:}'.format(i,np.linalg.norm(np.squeeze(KstageE[0:n, i]))))
+                print('** KI_{:}={:}'.format(i,KstageI[0:3, i]))
                 u_out = u_out+dt*b[i]*KstageE[0:n, i]+dt*bt[i]*KstageI[0:n, i]
         else:
             raise NotImplemented
@@ -759,9 +994,17 @@ class DESolver:
                 self._rhs_e = rhs['imex_explicit']
                 self._rhs_i = rhs['imex_implicit']
                 self._rhs = self._compound_imex_rhs
+
             if('explicit' in rhs.keys() and 'integrand' in rhs.keys()):
                 self._rhs = rhs['explicit']
                 self._rhs_gint = rhs['integrand']
+
+            if('mr_explicit_fast' in rhs.keys() and 'mr_explicit_slow' in rhs.keys()):
+                self._rhs_fast = rhs['mr_explicit_fast']
+                self._rhs_slow = rhs['mr_explicit_slow']
+            if('mr_implicit' in rhs.keys()):
+                self._rhs_mr_implicit = rhs['mr_implicit']
+        
         else:
             self._rhs = rhs
 
@@ -801,6 +1044,95 @@ class DESolver:
 
     def view_registered_methods(self):
         print(self._method_set)
+        return self._method_set
+
+    def view_complete_status(self):
+
+        print('------------------------------------------')
+        print('Current Method')
+        METHOD = self._methods[str(self._current_method)]
+        
+        if(METHOD['type'] is None):
+            print(' No method is currently selected')
+        elif(METHOD['type'] == 'GLEE'):
+            raise NotImplemented
+        elif(METHOD['type'] == 'ARK'):
+            A = METHOD['A']
+            b = METHOD['b']
+            c = METHOD['c']
+            At = METHOD['At']
+            bt = METHOD['bt']
+            ct = METHOD['ct']
+            s = METHOD['s'] 
+            print('Selected method type: {:}'.format(METHOD['type']))
+            print('Method coefficients:')
+            
+            print('A =') 
+            print(A)
+            print('b =') 
+            print(b)
+            print('c =') 
+            print(c)
+
+            print('At =') 
+            print(At)
+            print('bt =') 
+            print(bt)
+            print('ct =') 
+            print(ct)
+
+        elif(METHOD['type'] == 'MRK'):
+            raise NotImplemented
+        
+        elif(METHOD['type'] == 'IMEX-MRK'):
+            AS = METHOD['AB']
+            bS = METHOD['bB']
+            cS = METHOD['cB']
+            sS = METHOD['sB']
+
+            AF = METHOD['AF']
+            bF = METHOD['bF']
+            cF = METHOD['cF']
+            sF = METHOD['sF']
+
+            AS = METHOD['AS']
+            bS = METHOD['bS']
+            cS = METHOD['cS']
+            sS = METHOD['sS']
+
+            AT = METHOD['AT']
+            bT = METHOD['bT']
+            cT = METHOD['cT']
+            sT = METHOD['sT']
+
+            print('Selected method type: {:}'.format(METHOD['type']))
+            print('Method coefficients:')
+            
+            print('A_f =') 
+            print(AF)
+            print('b_f =') 
+            print(bF)
+            print('c_f =') 
+            print(cF)
+
+            print('A_s =') 
+            print(AS)
+            print('b_s =') 
+            print(bS)
+            print('c_s =') 
+            print(cS)
+
+            print('At =') 
+            print(AT)
+            print('bt =') 
+            print(bT)
+            print('ct =') 
+            print(cT)
+
+            
+        else:
+            raise NotImplemented
+        print('------------------------------------------')
         return self._method_set
 
     def set_initial_solution(self, U0):
@@ -889,3 +1221,119 @@ class DESolver:
                         self._t_trajectory,  self._u_high_trajectory, axis=1)
                     uh = finterp(time_points)
         return tt, uu, ee, el, uh
+
+    def grid_convergence(self, rhs_e, rhs_i, u_ini, problem_setup, problem, method, duration, grid=None, method_ref=None, ref_dt=None, RefSol=None):
+
+        
+        dt_tab=np.logspace(grid['start_exponent'], grid['end_exponent'], grid['points'])
+        #print(dt_tab)
+        T_end=20
+        NSteps=np.zeros(dt_tab.shape,dtype=int)
+        for i in range(dt_tab.size):
+            NSteps[i]=round(T_end/dt_tab[i])
+        
+        dt_tab=T_end/NSteps
+        #print(dt_tab)
+        #print(NSteps)
+
+        
+        self.set_info(0)
+        self.setup()
+        self.set_function_context(problem_setup['context'])
+        self.set_initial_solution(u_ini)
+
+        self.set_method(method)
+
+
+        if(rhs_i is not None):
+            self.set_rhs({'imex_explicit':rhs_e,'imex_implicit':rhs_i})
+        else:
+            self.set_rhs(rhs_e)
+
+        
+
+
+        
+        if(problem.exact_solution is None and RefSol is None):
+            print("Reference solution is not provided. Need to compute a reference solution first.")
+            problem_setup['DT']=ref_dt
+            
+            problem_setup['T_DURATION']['start']=duration['t_start']
+            problem_setup['T_DURATION']['end']=duration['t_end']*11./10.
+        
+            self.set_duration(t_start=problem_setup['T_DURATION']['start'],
+                              t_end=problem_setup['T_DURATION']['end'],
+                              dt=problem_setup['DT'])
+            Ref_Steps=round(duration['t_end']/ref_dt)
+            self.set_max_steps(Ref_Steps)
+
+            
+            print('Solving {:} by using {:} and using a time step of {:} ({:} steps)'.format(problem_setup['name'],self.get_method_name(),ref_dt,Ref_Steps))
+            
+            self.solve()
+            
+            t_ref,u_ref,glee_ref,_,_=self.get_trajectory_GLEE()
+        elif(problem.exact_solution is None and RefSol is not None):
+            print("Reference solution is provided. Reusing it.")
+            u_ref=RefSol['u_ref']
+            method_ref=RefSol['method_ref']
+            ref_dt=RefSol['ref_dt']
+            t_ref=RefSol['t_ref']
+            glee_ref=RefSol['glee_ref']
+            
+            print("Reference solution at final time {:} computed by {:} with time step {:}.".format(t_ref[-1],method_ref,ref_dt))
+        else:
+            raise NotImplementedError
+        
+
+            
+        sol_t = []
+        sol_u = []
+        sol_uf= []
+        sol_tf= []
+        err_tab_tf=[]
+        sol_glee = []
+        sol_gleef = []
+        sol_el=[]
+        sol_uh=[]
+        sol_uhf=[]
+
+        for i in range(dt_tab.size):
+            self.reset()
+            self.set_info(0)
+            self.setup()
+            self.set_initial_solution(u_ini)
+            self.set_method(method)
+
+
+            problem_setup['T_DURATION']['start']=duration['t_start']
+            problem_setup['T_DURATION']['end']=duration['t_end']*11./10.
+            problem_setup['DT']=dt_tab[i]
+           
+            self.set_duration(t_start=problem_setup['T_DURATION']['start'],
+                                t_end=problem_setup['T_DURATION']['end'],
+                                dt=problem_setup['DT'])
+            print('Solving {:} by using {:} and using a time step of {:} ({:} steps)'.format(problem_setup['name'],self.get_method_name(),dt_tab[i],NSteps[i]))
+
+            self.set_max_steps(NSteps[i])
+    
+            self.solve()
+
+            t,u,glee,el,uh=self.get_trajectory_GLEE()
+
+            sol_t.append(t.copy())
+            sol_u.append(u.copy())
+            sol_tf.append(t[-1])
+            sol_uf.append(u[:,-1])
+            sol_glee.append(glee)
+            if(glee is not None):
+                sol_gleef.append(glee[:,-1])
+                sol_el.append(el)
+                sol_uh.append(uh)
+                sol_uhf.append(uh[:,-1])
+
+                
+            err_tab_tf.append(np.linalg.norm(np.squeeze(np.asarray(sol_uf)[:]-u_ref[:,-1]),ord=2))
+
+        RS={'t_ref':t_ref,'u_ref':u_ref,'glee_ref':glee_ref,'method_ref':method_ref, 'ref_dt':ref_dt}
+        return dt_tab, sol_t, sol_u, sol_uf, sol_tf, err_tab_tf, sol_glee, sol_gleef,RS,sol_el,sol_uh,sol_uhf

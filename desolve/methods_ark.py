@@ -3,6 +3,121 @@ import numpy as np
 def Default_ARK_Methods():
     AllMethods_ARK=[]
 
+
+    # ARK-IMEX_MR2
+    ARK={}
+    
+    A=np.zeros((2,2))
+    A[1,0]=1.
+    
+    At=np.zeros((2,2))
+    At[1,0]=3.
+    At[1,1]=1.
+        
+    b=np.zeros((2))
+    bt=np.zeros((2))
+    b[0]=0.75
+    b[1]=0.25
+    bt=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=2
+    ARK['name']='ARK-IMEX-MR2'
+    
+    AllMethods_ARK.append(ARK)
+
+
+
+    # ARK-IMEX_MR4
+    ARK={}
+    
+    A=np.zeros((4,4))
+    A[1,0]=0.5
+    A[2,0]=0.25
+    A[2,1]=0.25
+    A[3,0]=0.25
+    A[3,1]=0.25
+    A[3,2]=0.5
+    
+    At=np.zeros((4,4))
+    At[3,0]=1.
+    At[3,1]=1.
+    At[3,2]=1.
+    At[3,3]=1.
+        
+    b=np.zeros((4))
+    bt=np.zeros((4))
+    b[0]=0.25
+    b[1]=0.25
+    b[2]=0.25
+    b[3]=0.25
+
+    bt=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=2
+    ARK['name']='ARK-IMEX-MR4'
+    
+    AllMethods_ARK.append(ARK)
+
+    # ARK-IMEX_MR4
+    ARK={}
+    
+    A=np.zeros((4,4))
+    A[1,0]=1.
+    A[3,2]=1.
+    
+    At=np.zeros((4,4))
+    At[3,0]=1.
+    At[3,1]=1.
+    At[3,2]=1.
+    At[3,3]=1.
+        
+    b=np.zeros((4))
+    bt=np.zeros((4))
+    b[0]=0.25
+    b[1]=0.25
+    b[2]=0.25
+    b[3]=0.25
+
+    bt=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=2
+    ARK['name']='ARK-IMEX-MR4-Slow'
+    
+    AllMethods_ARK.append(ARK)
+
+
+
+    
     # ARK2c
     ARK={}
     a32=0.5
