@@ -49,6 +49,27 @@ def Default_RK_Methods():
     RK['name']='RK3BS'
     AllMethods_RK.append(RK)
 
+    
+    # RK3
+    RK={}
+    A=np.zeros((3,3))
+    A[1,0]=1.0
+    A[2,0]=0.25
+    A[2,1]=0.25
+    b=np.zeros((3))
+    b[0]=1./6.
+    b[1]=1./6
+    b[2]=2./3.
+    c=np.sum(A,1)
+    RK['type']='RK'
+    RK['A']=A
+    RK['b']=b
+    RK['c']=c
+    RK['s']=np.size(b)
+    RK['p']=3
+    RK['name']='RK3SSPHig'
+    AllMethods_RK.append(RK)
+
     # RK2a
     RK={}
     A=np.zeros((2,2))

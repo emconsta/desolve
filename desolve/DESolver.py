@@ -647,15 +647,15 @@ class DESolver:
                     YstageS[0:nS, istage] = YstageS[0:nS, istage] + \
                         dt*AS[istage, jstage]*KstageS[0:nS, jstage]
 
-                print("Before YStage: {:}  {:}".format(YstageF[0:2, istage],YstageS[0:2, istage]))
+                if(self._info >= 2): print("Before YStage: {:}  {:}".format(YstageF[0:2, istage],YstageS[0:2, istage]))
                     
                 #The implicit part (explicit portion)
                 YstageG[0:n, istage] = self._function_context['MergeSolution'](YstageF[0:nF, istage],YstageS[0:nS, istage])
 
-                print("Sanity check (before stage): ||YG-u_in|| = {:}".format(np.linalg.norm(np.squeeze(YstageG[0:n, istage])-u_in)))
-                print("Stage {:}:".format(istage))
+                if(self._info >= 2): print("Sanity check (before stage): ||YG-u_in|| = {:}".format(np.linalg.norm(np.squeeze(YstageG[0:n, istage])-u_in)))
+                if(self._info >= 2): print("Stage {:}:".format(istage))
                 for jstage in range(istage):
-                    print("YG_{:} += AT[{:},{:}] * dt * KG_{:} (AT = {:})".format(istage,istage,jstage,jstage,AT[istage, jstage]))
+                    if(self._info >= 2): print("YG_{:} += AT[{:},{:}] * dt * KG_{:} (AT = {:})".format(istage,istage,jstage,jstage,AT[istage, jstage]))
                     YstageG[0:n, istage] = YstageG[0:n, istage] + \
                         dt*AT[istage, jstage]*KstageG[0:n, jstage]
             
@@ -664,7 +664,7 @@ class DESolver:
                     #This stage is explicit
                     pass
                 else:
-                    print("Stage {:} is implicit: AT[{:},:]={:}".format(istage,istage,AT[istage, :]))
+                    if(self._info >= 2): print("Stage {:} is implicit: AT[{:},:]={:}".format(istage,istage,AT[istage, :]))
                     def IMEX_Function(X, *data):
                         alpha = data[0]
                         t_stage_in = data[1]
@@ -688,23 +688,23 @@ class DESolver:
                     Res=YstageG[0:n, istage].copy()
                     params = (dt*AT[istage, istage], t_stageI, Res)
                     x=IMEX_Function(u_in,*params)
-                    print("X  in: {:}".format(np.linalg.norm(x)))
+                    if(self._info >= 2): print("X  in: {:}".format(np.linalg.norm(x)))
                     sol_f = fsolve(
                             func=IMEX_Function, fprime=IMEX_Function_Jac, x0=u_in, args=params, xtol=1.0e-12)
                     YstageG[0:n, istage] = sol_f.copy()
                     x=IMEX_Function(YstageG[0:n, istage],*params)
-                    print("X out: {:}".format(np.linalg.norm(x)))
+                    if(self._info >= 2): print("X out: {:}".format(np.linalg.norm(x)))
 
 
                 
                 t_stageI = t+cT[istage]*dt
 
-                print("Eval: KG_{:} = g({:},YG{:})".format(istage,t_stageI,istage))
+                if(self._info >= 2): print("Eval: KG_{:} = g({:},YG{:})".format(istage,t_stageI,istage))
                 KstageG[0:n, istage], _ = self._rhs_mr_implicit(
                     t_stageI, YstageG[0:n, istage], self._function_context)
                 
                 YstageF[0:nF, istage], YstageS[0:nS, istage] = self._function_context['SplitSolution'](YstageG[0:n, istage])
-                print("After  YStage: {:}  {:}".format(YstageF[0:2, istage],YstageS[0:2, istage]))
+                if(self._info >= 2): print("After  YStage: {:}  {:}".format(YstageF[0:2, istage],YstageS[0:2, istage]))
                 
                 t_stageF = t+cF[istage]*dt
                 t_stageS = t+cS[istage]*dt
@@ -714,7 +714,7 @@ class DESolver:
                 KstageS[0:nS, istage], _ = self._rhs_slow(
                     t_stageS, YstageS[0:nS, istage], YstageF[0:nF, istage], self._function_context)
 
-                print('Norms: K={:} KF={:} KS={:}'.format(np.linalg.norm(np.squeeze(KstageG[0:n, istage])),np.linalg.norm(np.squeeze(KstageF[0:nF, istage])),np.linalg.norm(np.squeeze(KstageS[0:nF, istage]))))
+                if(self._info >= 2): print('Norms: K={:} KF={:} KS={:}'.format(np.linalg.norm(np.squeeze(KstageG[0:n, istage])),np.linalg.norm(np.squeeze(KstageF[0:nF, istage])),np.linalg.norm(np.squeeze(KstageS[0:nF, istage]))))
             uF_out = uF_in.copy()
             uS_out = uS_in.copy()
 
@@ -725,10 +725,10 @@ class DESolver:
             
             u_out=self._function_context['MergeSolution'](uF_out,uS_out)
 
-            print("*Sanity check (before implicit stage): ||u_out-u_in|| = {:}".format(np.linalg.norm(u_out-u_in)))
+            if(self._info >= 2): print("*Sanity check (before implicit stage): ||u_out-u_in|| = {:}".format(np.linalg.norm(u_out-u_in)))
             
             for i in range(sT):
-                print("u_out += bT[{:}] * dt * KG_{:} (bT = {:})".format(i,i,bT[i]))
+                if(self._info >= 2): print("u_out += bT[{:}] * dt * KG_{:} (bT = {:})".format(i,i,bT[i]))
                 u_out = u_out+dt*bT[i]*KstageG[0:n, i]
             
         elif(METHOD['type'] == 'RK'):
@@ -912,7 +912,7 @@ class DESolver:
             ct = METHOD['ct']
             s = METHOD['s']
 
-            print(At,bt)
+            if(self._info >= 2): print(At,bt)
             Ystage = np.zeros(
                 (n, s), dtype=self._function_context['data-type'])
             KstageE = np.zeros(
@@ -950,11 +950,11 @@ class DESolver:
 
                     params = (dt*At[istage, istage], t_stageI, Res)
                     x=IMEX_Function(u_in,*params)
-                    print("X  in: {:}".format(np.linalg.norm(x)))
+                    if(self._info >= 2): print("X  in: {:}".format(np.linalg.norm(x)))
                     Ystage[0:n, istage] = fsolve(
                         func=IMEX_Function, fprime=IMEX_Function_Jac, x0=u_in, args=params)
                     x=IMEX_Function(Ystage[0:n, istage],*params)
-                    print("X out: {:}".format(np.linalg.norm(x)))
+                    if(self._info >= 2): print("X out: {:}".format(np.linalg.norm(x)))
                     
                 KstageE[0:n, istage], _ = self._rhs_e(
                     t_stageE, Ystage[0:n, istage], self._function_context)
@@ -964,8 +964,8 @@ class DESolver:
             u_out = u_in.copy()
             
             for i in range(s):
-                print('Norm of KE_{:}={:}'.format(i,np.linalg.norm(np.squeeze(KstageE[0:n, i]))))
-                print('** KI_{:}={:}'.format(i,KstageI[0:3, i]))
+                if(self._info >= 2): print('Norm of KE_{:}={:}'.format(i,np.linalg.norm(np.squeeze(KstageE[0:n, i]))))
+                if(self._info >= 2): print('** KI_{:}={:}'.format(i,KstageI[0:3, i]))
                 u_out = u_out+dt*b[i]*KstageE[0:n, i]+dt*bt[i]*KstageI[0:n, i]
         else:
             raise NotImplemented
@@ -1082,13 +1082,50 @@ class DESolver:
             print(ct)
 
         elif(METHOD['type'] == 'MRK'):
-            raise NotImplemented
+            AB = METHOD['AB']
+            bB = METHOD['bB']
+            cB = METHOD['cB']
+            sB = METHOD['sB']
+
+            AF = METHOD['AF']
+            bF = METHOD['bF']
+            cF = METHOD['cF']
+            sF = METHOD['sF']
+
+            AS = METHOD['AS']
+            bS = METHOD['bS']
+            cS = METHOD['cS']
+            sS = METHOD['sS']
+
+            print('Selected method type: {:}'.format(METHOD['type']))
+            print('Method coefficients:')
+            
+            print('A_f =') 
+            print(AF)
+            print('b_f =') 
+            print(bF)
+            print('c_f =') 
+            print(cF)
+
+            print('A_s =') 
+            print(AS)
+            print('b_s =') 
+            print(bS)
+            print('c_s =') 
+            print(cS)
+
+            print('A base =') 
+            print(AB)
+            print('b base =') 
+            print(bB)
+            print('c base  =') 
+            print(cB)
         
         elif(METHOD['type'] == 'IMEX-MRK'):
-            AS = METHOD['AB']
-            bS = METHOD['bB']
-            cS = METHOD['cB']
-            sS = METHOD['sB']
+            AB = METHOD['AB']
+            bB = METHOD['bB']
+            cB = METHOD['cB']
+            sB = METHOD['sB']
 
             AF = METHOD['AF']
             bF = METHOD['bF']
