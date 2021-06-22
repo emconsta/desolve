@@ -25,7 +25,9 @@ def ProblemsODE(name,problem_ctx=None):
     elif re.match(r'\ALorenz\Z',name,re.IGNORECASE):
         problem = Lorenz(problem_ctx)
     elif re.match(r'\ALorenz96\Z',name,re.IGNORECASE):
-        problem = Lorenz96(problem_ctx)   
+        problem = Lorenz96(problem_ctx)
+    elif re.match(r'\ABEKiller\Z',name,re.IGNORECASE):
+        problem = BEKiller(problem_ctx)   
     else:
         raise NameError('Problem {:} has not been found.'.format(name))
     
@@ -113,7 +115,70 @@ class Prince1978A:
             return u
         else:
             return(np.exp(-t))
+        
+class BEKiller:
+    def __init__(self,problem_ctx=None):
+        
+        self.rhs_i=None
+        #self.exact_solution=None
+        
+        if(problem_ctx is None):
+            ctx={'sigma': 10.,'rho':28.,'beta':8./3.}
+        else:
+            ctx={'sigma': problem_ctx['sigma'],'rho': problem_ctx['rho'],'beta': problem_ctx['beta']}
 
+        self.u_ini=np.zeros((3))
+        self.u_ini[:]=np.asarray([1.,0.,2.])
+            
+        problem_setup={}
+        problem_setup['context']=ctx
+        problem_setup['context']['data-type']=np.float64
+        problem_setup['name']='BEKiller'
+        problem_setup['DT']=0.1
+        problem_setup['DT_REFERENCE']=1.0e-04
+        problem_setup['T_DURATION']={'start':0.,'end':50.}
+        problem_setup['DT_INTERVAL']={'start':1e-02,'end':1e-01}
+
+        self.problem_setup=problem_setup
+        
+    def rhs_e(self,t,u_in,ctx=None):
+        A=np.zeros((3,3),ctx['data-type'])
+        A[0,0]=42.2
+        A[0,1]=50.1
+        A[0,2]=-42.1
+        A[1,0]=-66.1
+        A[1,1]=-58
+        A[1,2]=58.1
+        A[2,0]=26.1
+        A[2,1]=42.1
+        A[2,2]=-34
+        u_out=np.matmul(A,u_in)
+        j_out=A
+        
+        
+        return u_out,j_out
+ 
+    def initial_solution(self):
+        return (self.u_ini)
+    
+    def get_problem_setup(self):
+        return (self.problem_setup)
+    
+    def exact_solution(self,t,ctx=None):
+        if(isinstance(t,np.ndarray)):
+            u=np.zeros((3,len(t)))
+            for i in range(len(t)):
+                u[0,i]=np.exp(0.1*t[i])*np.sin(8*t[i])+np.exp(-50*t[i])
+                u[1,i]=np.exp(0.1*t[i])*np.cos(8*t[i])-np.exp(-50*t[i])
+                u[2,i]=np.exp(0.1*t[i])*(np.cos(8*t[i])+np.sin(8*t[i]))+np.exp(-50*t[i])
+            return u
+        else:
+            u=np.zeros((3,))
+            u[0]=np.exp(0.1*t)*np.sin(8*t)+np.exp(-50*t)
+            u[1]=np.exp(0.1*t)*np.cos(8*t)-np.exp(-50*t)
+            u[2]=np.exp(0.1*t)*(np.cos(8*t)+np.sin(8*t))+np.exp(-50*t)
+            return u
+        
 class ProtheroRobinson:
     def __init__(self,problem_ctx=None):
     
