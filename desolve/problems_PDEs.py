@@ -5,8 +5,8 @@ def ProblemsPDE(name,problem_ctx=None):
     rhs_i=None
     u_ini=None
   
-    if(name=='advection_reaction'):
-        problem = advection_reaction(problem_ctx)
+    if(name=='Advection Reaction 1D'):
+        problem = AdvectionReaction1D(problem_ctx)
     elif(name=='GrayScott'):
         problem = GrayScott(problem_ctx)
     elif(name=='Navier-Stokes2D'):
@@ -608,6 +608,218 @@ class AdvectionDiffusion1D:
     def get_problem_setup(self):
         return (self.problem_setup)
 
+
+
+class AdvectionReaction1D:
+    def __init__(self,problem_ctx=None):
+
+        s=problem_ctx['s']
+        alpha=problem_ctx['alpha']
+        n=problem_ctx['n']
+        mx=problem_ctx['mx']
+        Flux_type=problem_ctx['Flux']
+
+        if('Flux_c' in problem_ctx.keys()):
+            Flux_c=problem_ctx['Flux_c']
+        elif('Flux_cv' in problem_ctx.keys()):
+            Flux_cv=problem_ctx['Flux_cv']
+        else:
+            raise NotImplemented
+        
+        BC_type=problem_ctx['BC']
+        x_max=problem_ctx['x_max']
+        x_min=problem_ctx['x_min']
+        kappa=problem_ctx['kappa']
+        dx=float(x_max-x_min)/mx
+        
+        x_coord=np.zeros((mx,))
+
+        for i in range(mx):
+            x_coord[i]=((i+1.)*dx)+x_min
+
+        if(problem_ctx is None):
+           raise Error
+        else:
+            ctx={}
+            ctx['alpha']=problem_ctx['alpha']
+            ctx['s']=problem_ctx['s']
+            ctx['mx']=problem_ctx['mx']
+            ctx['n']=problem_ctx['n']
+            ctx['x_min']=problem_ctx['x_min']
+            ctx['x_max']=problem_ctx['x_max']
+            ctx['Flux']=problem_ctx['Flux']
+            if('Flux_c' in problem_ctx.keys()):
+                ctx['Flux_c']=problem_ctx['Flux_c']
+            elif('Flux_cv' in problem_ctx.keys()):
+                ctx['Flux_cv']=problem_ctx['Flux_cv']
+            else:
+                raise NotImplemented
+            ctx['dx']=dx
+            ctx['x_coord']=x_coord
+            ctx['vectorize']=self.vectorize
+            ctx['unvectorize']=self.unvectorize
+            ctx['kappa']=problem_ctx['kappa']
+            ctx['x_max']=problem_ctx['x_max']
+            ctx['x_min']=problem_ctx['x_min']
+
+        problem_setup={}
+        problem_setup['name']='Advection Reaction 1D'
+        problem_setup['context']=ctx
+        problem_setup['context']['data-type']=np.float64
+        problem_setup['DT']=1.0e-01
+        problem_setup['DT_REFERENCE']=1.0e-04
+        problem_setup['T_DURATION']={'start':0.,'end':5}
+        problem_setup['DT_INTERVAL']={'start':1e-03,'end':1e-01}
+
+        u_ini_pde=np.zeros((n,mx),problem_setup['context']['data-type'])
+
+
+
+        u_ini_pde[0,:]=1.0+s[1]*x_coord
+        u_ini_pde[1,:]=(kappa[0]/kappa[1])* u_ini_pde[0,:]+s[1]/kappa[1]
+
+        self._dx=ctx['dx']
+        self._n=ctx['n']
+        self._nF=int(ctx['mx']/2)
+        self._nS=ctx['mx']-int(ctx['mx']/2)
+        self._mx=ctx['mx']
+        ctx['nF']=self._nF
+        ctx['nS']=self._nS
+        
+        self.u_ini=self.vectorize(u_ini_pde,problem_ctx)
+        problem_setup['context']['u_ini']=self.u_ini
+        self.problem_setup=problem_setup
+    
+    def rhs_e(self,t,u_in,ctx=None):
+        vec=ctx['vectorize']
+        unvec=ctx['unvectorize']
+
+        s=ctx['s']
+        n=ctx['n']
+        mx=ctx['mx']
+        dx=ctx['dx']
+        alpha=ctx['alpha']
+
+        if('Flux_c' in ctx.keys()):
+            c=ctx['Flux_c']
+            cv=np.zeros((n,mx))
+            cv[:]=c
+        elif('Flux_cv' in ctx.keys()):
+            cv=ctx['Flux_cv']
+        else:
+            raise NotImplemented
+
+        cv=np.zeros((n,mx))
+        cv[0,:]=alpha[0]
+        cv[1,:]=alpha[1]
+
+        
+        F=np.zeros((n,mx+1),ctx['data-type'])
+        Flux=np.zeros((n,mx),ctx['data-type'])
+        
+        y=unvec(u_in,ctx)
+
+
+        yb=np.asarray([1-np.sin(12*t)**4,0]).reshape(2,)
+        
+        #F[:,0]=cv[:,-1]*yb[:]
+        #for id_mx in range(1,mx):
+        #    F[:,id_mx]=cv[:,id_mx-1]*y[:,id_mx-1]
+        #F[:,mx]=cv[:,mx-1]*y[:,mx-1]
+    
+        #for id_mx in range(0,mx):
+        #    Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])+np.reshape(s[:],(2,))
+        
+
+
+        Flux[0,0]=alpha[0]*((1./3.)*yb[0]+(0.5)*y[0,0]+(-1.)*y[0,1]+(1./6.)*y[0,2])/dx
+        if(alpha[1]!=0):
+            Flux[1,0]=alpha[1]*((1./3.)*yb[1]+(0.5)*y[1,0]+(-1.)*y[1,1]+(1./6.)*y[1,2])/dx
+        
+        Flux[0,1]=alpha[0]*((-1./12.)*yb[0]+(2./3.)*y[0,0]+(-2./3.)*y[0,2]+(1./12.)*y[0,3])/dx
+        if(alpha[1]!=0):
+            Flux[1,1]=alpha[1]*((-1./12.)*yb[1]+(2./3.)*y[1,0]+(-2./3.)*y[1,2]+(1./12.)*y[1,3])/dx
+        
+        for i in range(2,mx-2): 
+            Flux[0,i]=alpha[0]*((-1./12.)*y[0,i-2]+(2./3.)*y[0,i-1]+(-2./3.)*y[0,i+1]+(1./12.)*y[0,i+2])/dx
+
+        if(alpha[1]!=0):
+            for i in range(2,mx-2):
+                Flux[1,i]=alpha[1]*((-1./12.)*y[1,i-2]+(2./3.)*y[1,i-1]+(-2./3.)*y[1,i+1]+(1./12.)*y[1,i+2])/dx
+        
+        
+        Flux[0,mx-2]=alpha[0]*((-1./6.)*y[0,mx-4]+(1.)*y[0,mx-3]+(-0.5)*y[0,mx-2]+(-1./3.)*y[0,mx-1])/dx
+        if(alpha[1]!=0):
+            Flux[1,mx-2]=alpha[1]*((-1./6.)*y[1,mx-4]+(1.)*y[1,mx-3]+(-0.5)*y[1,mx-2]+(-1./3.)*y[2,mx-1])/dx
+        
+        
+        Flux[0,mx-1]=-alpha[0]*(y[0,mx-1]-y[0,mx-2])/dx
+        
+        if(alpha[1]!=0):
+            Flux[1,mx-1]=-alpha[1]*(y[1,mx-1]-y[1,mx-2])/dx
+
+
+        for i in range(mx):
+            Flux[:,i]=Flux[:,i]+np.reshape(s[:],(2,))
+            
+        u_out=vec(Flux,ctx)
+        
+        j_out=None
+        
+        return u_out,j_out
+    
+    def rhs_i(self,t,u_in,ctx=None):
+        vec=ctx['vectorize']
+        unvec=ctx['unvectorize']
+        
+        n=ctx['n']
+        mx=ctx['mx']
+        dx=ctx['dx']
+        kappa=ctx['kappa']
+        
+        F=np.zeros((n,mx),ctx['data-type'])
+
+
+        
+        K=np.asarray([[-kappa[0],kappa[1]],[kappa[0], -kappa[1]]])
+        
+       
+        y=unvec(u_in,ctx)
+
+        for id_mx in range(mx):
+            F[:,id_mx]=np.matmul(K,y[:,id_mx])
+        
+        u_out=vec(F,ctx)
+
+        K11=kappa[0]*np.eye(mx)
+        K12=kappa[1]*np.eye(mx)
+        K1=np.hstack(((-1)*K11,K12))
+        K2=np.hstack((K11,(-1)*K12))
+        j_out=np.vstack((K1,K2))
+
+        return u_out,j_out
+
+    def TotalMass(self,u_pde):
+        mass=0.
+        for i in range(self._mx):
+            for j in range(self._n):
+                mass+=self._dx*u_pde[j,i]
+        
+        return mass
+    
+    def vectorize(self,u_pde,pde_problem_ctx):
+        u_ode=np.reshape(u_pde.copy(),(pde_problem_ctx['mx']*pde_problem_ctx['n']))
+        return u_ode
+    
+    def unvectorize(self,u_ode,pde_problem_ctx):
+        u_pde=np.reshape(u_ode.copy(),(pde_problem_ctx['n'],pde_problem_ctx['mx']))
+        return u_pde
+    
+    def initial_solution(self):
+        return (self.u_ini)
+    
+    def get_problem_setup(self):
+        return (self.problem_setup)
 
 
     

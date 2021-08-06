@@ -36,7 +36,199 @@ def Default_ARK_Methods():
     AllMethods_ARK.append(ARK)
 
 
+    # ARK-IMEX_Mix1-1
+    ARK={}
+    
+    A=np.zeros((2,2))
+    A[1,0]=1.5
+    
+    At=np.zeros((2,2))
+    At[1,0]=1.
+    At[1,1]=1.
+        
+    b=np.zeros((2))
+    bt=np.zeros((2))
+    b[0]=0.5
+    b[1]=0.5
+    bt=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=1
+    ARK['name']='ARK-IMEX-Mix-1-1'
+    
+    AllMethods_ARK.append(ARK)
+    
 
+    # ARK-IMEX_Mix1-1
+    ARK={}
+    
+    A=np.zeros((2,2))
+    A[1,0]=1.
+    
+    At=np.zeros((2,2))
+    At[1,0]=1.
+    At[1,1]=1.
+        
+    b=np.zeros((2))
+    bt=np.zeros((2))
+    b[0]=0.5
+    b[1]=0.5
+    bt=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=2
+    ARK['name']='ARK-IMEX-Mix-2-1'
+    
+    AllMethods_ARK.append(ARK)
+
+
+
+    # ARK-IMEX_Mix2-2
+    ARK={}
+    
+    A=np.zeros((2,2))
+    A[1,0]=1.
+    
+    At=np.zeros((2,2))
+    At[0,0]=0.25
+    At[1,0]=5./12.
+    At[1,1]=1./3.
+        
+    b=np.zeros((2))
+    bt=np.zeros((2))
+    b[0]=0.5
+    b[1]=0.5
+    bt=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=2
+    ARK['name']='ARK-IMEX-Mix-2-2'
+    
+    AllMethods_ARK.append(ARK)
+    
+
+    ARK={}
+    a32=0.5
+    
+    A=np.zeros((3,3))
+    A[1,0]=2.-np.sqrt(2.)
+    A[2,0]=1.-a32
+    A[2,1]=a32
+    
+    At=np.zeros((3,3))
+
+    At[2,0]=0.5+1./(np.sqrt(2.))
+    At[2,1]=0.5+1./(np.sqrt(2.))
+    At[2,2]=1.
+        
+    b=np.zeros((3))
+    bt=np.zeros((3))
+    b[0]=1./(2*np.sqrt(2.))
+    b[1]=1./(2*np.sqrt(2.))
+    b[2]=1.-1/np.sqrt(2.)
+    bt[:]=b.copy()
+        
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=2
+    ARK['name']='ARK-IMEX-Mix-2-2-c'
+    
+    AllMethods_ARK.append(ARK)
+
+    
+
+    # ARK4
+    ARK={}
+    
+    s=6
+    A=np.zeros((s,s))
+    A[1,0]=1./2.
+    A[2,0]=13861./62500. 
+    A[2,1]=6889./62500.
+    A[3,0]=-116923316275./2393684061468.
+    A[3,1]=-2731218467317./15368042101831.
+    A[3,2]=9408046702089./11113171139209.
+    A[4,0]=-451086348788./2902428689909.
+    A[4,1]=-2682348792572./7519795681897. 
+    A[4,2]=12662868775082./11960479115383.
+    A[4,3]=3355817975965./11060851509271.
+    A[5,0]=647845179188./3216320057751.
+    A[5,1]=73281519250./8382639484533.
+    A[5,2]=552539513391./3454668386233.
+    A[5,3]=3354512671639./8306763924573.
+    A[5,4]=4040./17871.
+
+    At=np.zeros((s,s))
+    At[5,0]=-(354521./82889.)
+    At[5,1]=105854./82889.
+    At[5,2]=1.
+    At[5,3]=1.
+    At[5,4]=1.
+    At[5,5]=1.
+
+    b=np.zeros((s))
+    bt=np.zeros((s))
+    b[0]=82889./524892.
+    b[1]=0.
+    b[2]=15625./83664.
+    b[3]=69875./102672.
+    b[4]=-2260./8211. 
+    b[5]=1./4.
+    bt[:]=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=1
+    ARK['name']='ARK-IMEX-Mix-4-1'
+
+    AllMethods_ARK.append(ARK)
+
+
+
+    
     # ARK-IMEX_MR4
     ARK={}
     
@@ -295,7 +487,7 @@ def Default_ARK_Methods():
     ARK['bt']=bt
     ARK['ct']=ct
     ARK['s']=np.size(b)
-    ARK['p']=3
+    ARK['p']=4
     ARK['name']='ARK4'
 
     AllMethods_ARK.append(ARK)
