@@ -144,6 +144,42 @@ def Default_ARK_Methods():
     
     At=np.zeros((3,3))
 
+    At[2,0]=0.25*(1.+np.sqrt(2.))
+    At[2,1]=0.25*(1.+np.sqrt(2.))
+    At[2,2]=1./2.
+        
+    b=np.zeros((3))
+    bt=np.zeros((3))
+    b[0]=1./(2*np.sqrt(2.))
+    b[1]=1./(2*np.sqrt(2.))
+    b[2]=1.-1/np.sqrt(2.)
+    bt[:]=b.copy()
+        
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=2
+    ARK['name']='ARK-IMEX-Mix-2-2-c'
+    
+    AllMethods_ARK.append(ARK)
+
+    ARK={}
+    a32=0.5
+    
+    A=np.zeros((3,3))
+    A[1,0]=2.-np.sqrt(2.)
+    A[2,0]=1.-a32
+    A[2,1]=a32
+    
+    At=np.zeros((3,3))
+
     At[2,0]=0.5+1./(np.sqrt(2.))
     At[2,1]=0.5+1./(np.sqrt(2.))
     At[2,2]=1.
@@ -166,7 +202,7 @@ def Default_ARK_Methods():
     ARK['ct']=ct
     ARK['s']=np.size(b)
     ARK['p']=2
-    ARK['name']='ARK-IMEX-Mix-2-2-c'
+    ARK['name']='ARK-IMEX-Mix-2-1-c'
     
     AllMethods_ARK.append(ARK)
 
@@ -383,7 +419,51 @@ def Default_ARK_Methods():
     ARK['name']='ARK2e'
 
     AllMethods_ARK.append(ARK)
+
+
+
+    # ARK3
+    ARK={}
     
+    s=4
+    A=np.zeros((s,s))
+    A[1,0]=0.8717330430169179988320388786
+    A[2,0]=0.5275890119763004115618079549
+    A[2,1]=0.07241098802369958843819203209
+    A[3,0]=0.3990960076760701320627260686
+    A[3,1]=-0.4375576546135194437228463765
+    A[3,2]=1.038461646937449311660120301
+
+    At=np.zeros((s,s))
+    At[3,0]=0.4305011169413299765545074125
+    At[3,1]=-1.365779302151339516743575845
+    At[3,2]=2.229558545489051260011118788
+    At[3,3]=1.000000000000000000000000000
+    
+    b=np.zeros((s))
+    bt=np.zeros((s))
+
+    b[0]=0.1876410243467238251612921333
+    b[1]=-0.5952974735769549480478230474
+    b[2]=0.9717899277217721234705114616
+    b[3]=0.4358665215084589994160194524
+    
+    bt[:]=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=3
+    ARK['name']='ARK-IMEX-Mix-3-1'
+
+    AllMethods_ARK.append(ARK)
     
     # ARK3
     ARK={}
