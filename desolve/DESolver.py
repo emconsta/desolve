@@ -687,13 +687,24 @@ class DESolver:
                     t_stageI = t+cT[istage]*dt
                     Res=YstageG[0:n, istage].copy()
                     params = (dt*AT[istage, istage], t_stageI, Res)
-                    x=IMEX_Function(u_in,*params)
-                    if(self._info >= 2): print("X  in: {:}".format(np.linalg.norm(x)))
-                    sol_f = fsolve(
-                            func=IMEX_Function, fprime=IMEX_Function_Jac, x0=u_in, args=params, xtol=1.0e-12)
+                    
+                    if(self._info >= 2):
+                        x=IMEX_Function(u_in,*params)
+                        print("X  in: {:}".format(np.linalg.norm(x)))
+                        
+                    sol_fsolve = fsolve(func=IMEX_Function, fprime=IMEX_Function_Jac,x0=u_in, args=params, xtol=1.0e-12,full_output=True)
+                    
+                    sol_f=sol_fsolve[0]
+                    if(self._info >= 2):
+                        info_dict=sol_fsolve[1]
+                        print("FSOLVE> Number of function evaluations: {:}".format(info_dict["nfev"]))
+                        print("FSOLVE> Number of Jacobian evaluations: {:}".format(info_dict["nfev"]))
+                        print("FSOLVE> Norm of function at output: {:}".format(np.linalg.norm(info_dict["fvec"])))
                     YstageG[0:n, istage] = sol_f.copy()
-                    x=IMEX_Function(YstageG[0:n, istage],*params)
-                    if(self._info >= 2): print("X out: {:}".format(np.linalg.norm(x)))
+                    
+                    if(self._info >= 2):
+                        x=IMEX_Function(YstageG[0:n, istage],*params)
+                        print("X out: {:}".format(np.linalg.norm(x)))
 
 
                 
@@ -724,13 +735,41 @@ class DESolver:
                 uS_out = uS_out+dt*bS[i]*KstageS[0:nS, i]
             
             u_out=self._function_context['MergeSolution'](uF_out,uS_out)
+            if(self._info >= 3):
+                import matplotlib.pyplot as plt
+                plt.plot(u_out)
+                plt.title('Before adding the implicit part')
+                plt.show()
 
+
+            dd=np.zeros(n)
+            if(self._info >= 3):
+                plt.figure()
+                for i in range(sT):
+                    dd+=np.squeeze(KstageG[0:n, i])
+                    plt.plot(np.squeeze(KstageG[0:n, i]),label='{:}'.format(i))
+                plt.legend()
+                plt.title('K implicit')
+                plt.show()
+
+            
+                plt.figure()
+                plt.plot(dt*dd)
+            
+                plt.title('Sum of K implicit * dt')
+                plt.show()
+            
             if(self._info >= 2): print("*Sanity check (before implicit stage): ||u_out-u_in|| = {:}".format(np.linalg.norm(u_out-u_in)))
             
             for i in range(sT):
                 if(self._info >= 2): print("u_out += bT[{:}] * dt * KG_{:} (bT = {:})".format(i,i,bT[i]))
                 u_out = u_out+dt*bT[i]*KstageG[0:n, i]
-            
+
+            if(self._info >= 3):
+                plt.figure()
+                plt.plot(u_out)
+                plt.title('Done with the step')
+                plt.show()
         elif(METHOD['type'] == 'RK'):
             A = METHOD['A']
             b = METHOD['b']
@@ -1166,7 +1205,22 @@ class DESolver:
             print('ct =') 
             print(cT)
 
+        elif(METHOD['type'] == 'RK'):
+            A = METHOD['A']
+            b = METHOD['b']
+            c = METHOD['c']
+           
+            s = METHOD['s'] 
+            print('Selected method type: {:}'.format(METHOD['type']))
+            print('Method coefficients:')
             
+            print('A =') 
+            print(A)
+            print('b =') 
+            print(b)
+            print('c =') 
+            print(c)
+
         else:
             raise NotImplemented
         print('------------------------------------------')

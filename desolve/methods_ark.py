@@ -4,6 +4,38 @@ def Default_ARK_Methods():
     AllMethods_ARK=[]
 
 
+    # ARK-IMEX_MR2_AStable
+    ARK={}
+    
+    A=np.zeros((2,2))
+    A[1,0]=1.
+    
+    At=np.zeros((2,2))
+    At[1,0]=.5
+    At[1,1]=.5
+        
+    b=np.zeros((2))
+    bt=np.zeros((2))
+    b[0]=0.5
+    b[1]=0.5
+    bt=b.copy()
+    
+    c=np.sum(A,1)
+    ct=np.sum(At,1)
+    ARK['type']='ARK'
+    ARK['A']=A
+    ARK['b']=b
+    ARK['c']=c
+    ARK['At']=At
+    ARK['bt']=bt
+    ARK['ct']=ct
+    ARK['s']=np.size(b)
+    ARK['p']=2
+    ARK['name']='ARK-IMEX-MR2-AStable'
+    
+    AllMethods_ARK.append(ARK)
+
+    
     # ARK-IMEX_MR2
     ARK={}
     

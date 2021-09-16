@@ -70,10 +70,34 @@ def Default_RK_Methods():
     RK['name']='RK3SSPHig'
     AllMethods_RK.append(RK)
 
-    # RK2a
+    # RK2a twice
+    RK={}
+    A=np.zeros((4,4))
+    A[1,0]=0.5
+    A[2,0]=0.25
+    A[2,1]=0.25
+    A[3,0]=0.25
+    A[3,1]=0.25
+    A[3,2]=0.5
+    b=np.zeros((4))
+    b[0]=1/4.
+    b[1]=1/4.
+    b[2]=1/4.
+    b[3]=1/4.
+    c=np.sum(A,1)
+    RK['type']='RK'
+    RK['A']=A
+    RK['b']=b
+    RK['c']=c
+    RK['s']=np.size(b)
+    RK['p']=2
+    RK['name']='RK2a2'
+    AllMethods_RK.append(RK)
+
+    # RK2a 
     RK={}
     A=np.zeros((2,2))
-    A[1,0]=1.
+    A[1,0]=1.0
     b=np.zeros((2))
     b[0]=1/2.
     b[1]=1/2.
