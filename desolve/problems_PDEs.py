@@ -39,18 +39,60 @@ def LinearAdvectionSemiDiscretization1D(ghostPoints_l=None, ghostPoints_r=None, 
         F=np.zeros((n,mx+1),ctx['data-type'])
         Flux=np.zeros((n,mx),ctx['data-type'])
         
-        y=solution
-        cv=speed
+        assert ghostPoints_l==1,'Need to provide exactly one ghost point'
 
-        F[:,0]=cv[:,-1]*y[:,-1]
-        for id_mx in range(1,mx):
-            F[:,id_mx]=cv[:,id_mx-1]*y[:,id_mx-1]
-        F[:,mx]=cv[:,mx-1]*y[:,mx-1]
+        y=solution
+        c=speed
+
+        for id_mx in range(mx+1):
+            F[:,id_mx]=c[:,id_mx]*y[:,id_mx]
         for id_mx in range(0,mx):
             Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])
-        pass
+            
+    elif(ctx['Flux_name']=='3rdOrderUpwindFD'):
+        Flux=np.zeros((n,mx),ctx['data-type'])
+
+        assert ghostPoints_l==2,'Need to provide exactly two ghost points'
+
+        y=solution
+        c=speed
+        
+        for id_mx in range(mx):    
+            Flux[:,id_mx]=(c[:,id_mx+2]/dx)*((-1./6.)*y[:,id_mx]+(1.)*y[:,id_mx+1]+(-1./2.)*y[:,id_mx+2]+(-1./3.)*y[:,id_mx+3])
+    elif(ftype[0:13]=='FVStagVanLeer'):
+        F=np.zeros((n,mx+1),ctx['data-type'])
+        Flux=np.zeros((n,mx),ctx['data-type'])
+        
+        assert ghostPoints_l==2,'Need to provide exactly two ghost point'
+        assert ghostPoints_r==2,'Need to provide exactly two ghost point'
+        if(ftype=='FVStagVanLeer-k=1'):
+            kappa = 1.
+        if(ftype=='FVStagVanLeer-k=-1'):
+            kappa = -1.
+        if(ftype=='FVStagVanLeer-k=1/3'):
+            kappa = 1./3.
+        if(ftype=='FVStagVanLeer-k=0'):
+            kappa = 0.
+        
+        y=solution
+        c=speed
+
+        for id_mx in range(mx+1):
+            if(c[:,id_mx]>=0):
+                omega_j=y[:,id_mx+2]
+                omega_jm1=y[:,id_mx+1]
+                omega_jm2=y[:,id_mx]
+                F[:,id_mx]=c[:,id_mx+2]*(omega_jm1+(omega_jm1-omega_jm2)*(1.-kappa)/4.+(omega_j-omega_jm1)*(1.+kappa)/4.)
+            else:
+                omega_jm1=-y[:,id_mx+2]
+                omega_j=-y[:,id_mx+1]
+                omega_jp1=-y[:,id_mx]
+                F[:,id_mx]=c[:,id_mx+2]*(omega_j+(omega_j-omega_jp1)*(1.-kappa)/4.+(omega_jm1-omega_j)*(1.+kappa)/4.)
+            
+        for id_mx in range(0,mx):
+            Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])
     else:
-        raise NameError('{:} discretization type not implemented'.format(self.Flux_name))
+        raise NameError('{:} discretization type not implemented'.format(ctx['Flux_name']))
     return Flux
 
 class Advection1D:
@@ -160,80 +202,33 @@ class Advection1D:
         uF_in=self.unvectorize_partition(uF_in,'F',ctx)
 
         if(ctx['Flux_name']=='1stOrderUpwindFV'):
-            F=np.zeros((n,nF+1),ctx['data-type'])
-            Flux=np.zeros((n,nF),ctx['data-type'])
-
-            y=uF_in
-
-            #debug_wind=[cS[:,-1][0]]
-            #debug_sol=[uS_in[:,-1][0]]
-
-            F[:,0]=cS[:,-1]*uS_in[:,-1]
-
-            for id_mx in range(1,nF):
-                F[:,id_mx]=cF[:,id_mx-1]*y[:,id_mx-1]
-                #debug_wind.append(cF[:,id_mx-1][0])
-                #debug_sol.append(y[:,id_mx-1][0])
-
-            F[:,nF]=cF[:,nF-1]*y[:,nF-1]
-            #debug_wind.append(cF[:,nF-1][0])
-            #debug_sol.append(y[:,nF-1][0])
-
-            for id_mx in range(0,nF):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
-
-            #print('Fast:')
-            #print('Wind: {:}'.format(debug_wind))
-            #print('Sol : {:}'.format(debug_sol))
-
-            u_out=Flux
-            u_out=self.vectorize_partition(u_out,'F',ctx)
-            j_out=None
-        elif(ctx['Flux_name']=='1stOrderUpwindFVTest'):
-            F=np.zeros((n,nF+1),ctx['data-type'])
-            Flux=np.zeros((n,nF),ctx['data-type'])
-            
-            y=np.hstack((np.reshape(uS_in[:,-1],(n,1)),uF_in))
-            c=np.hstack((np.reshape(cS[:,-1],(n,1)),cF))
-            for id_mx in range(nF+1):
-                F[:,id_mx]=c[:,id_mx]*y[:,id_mx]
-            for id_mx in range(0,nF):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
-            u_out=Flux
-            u_out=self.vectorize_partition(u_out,'F',ctx)
-            j_out=None
-        elif(ctx['Flux_name']=='1stOrderUpwindFVTestStag'):
-            F=np.zeros((n,nF+1),ctx['data-type'])
-            Flux=np.zeros((n,nF),ctx['data-type'])
-            
-            y=np.hstack((np.reshape(uS_in[:,-1],(n,1)),uF_in))
-            cm=np.hstack((np.reshape(cS[:,-1],(n,1)),cF))
-            cp=np.hstack((cF,np.reshape(cS[:,0],(n,1))))
+            y=np.hstack((np.reshape(uS_in[:,-1],(n,1)),uF_in,np.reshape(uS_in[:,0],(n,1))))
+            c=np.hstack((np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1))))
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=y, n=n, mx=nF, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+        elif(ctx['Flux_name']=='1stOrderUpwindFVStag'):       
+            y=np.hstack((np.reshape(uS_in[:,-1],(n,1)),uF_in,np.reshape(uS_in[:,0],(n,1))))
+            cm=np.hstack((np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1))))
+            cp=np.hstack((cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1))))
             c=0.5*(cm+cp)
-            for id_mx in range(nF+1):
-                F[:,id_mx]=c[:,id_mx]*y[:,id_mx]
-            for id_mx in range(0,nF):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
-            u_out=Flux
-            u_out=self.vectorize_partition(u_out,'F',ctx)
-            j_out=None
-            
-        elif(ctx['Flux_name']=='3rdOrderUpwindFD'):
-            
-            Flux=np.zeros((n,nF),ctx['data-type'])
-            
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=y, n=n, mx=nF, dx=dx, ctx=ctx, ftype='1stOrderUpwindFV')
+    
+        elif(ctx['Flux_name']=='3rdOrderUpwindFD'):            
             y=np.hstack((np.reshape(uS_in[:,-2],(n,1)),np.reshape(uS_in[:,-1],(n,1)),uF_in,np.reshape(uS_in[:,0],(n,1))))
-            c=cF
+            c=np.hstack((np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1))))
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=1, speed=c, solution=y, n=n, mx=nF, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+        elif(ctx['Flux_name'][0:13]=='FVStagVanLeer'):
+            y=np.hstack((np.reshape(uS_in[:,-2],(n,1)),np.reshape(uS_in[:,-1],(n,1)),uF_in,np.reshape(uS_in[:,0],(n,1)),np.reshape(uS_in[:,1],(n,1))))
             
-            for id_mx in range(0,nF):
-                Flux[:,id_mx]=(c[:,id_mx]/dx)*((-1./6.)*y[:,id_mx]+(1.)*y[:,id_mx+1]+(-1./2.)*y[:,id_mx+2]+(-1./3.)*y[:,id_mx+3]) 
-            u_out=Flux
-            u_out=self.vectorize_partition(u_out,'F',ctx)
-            j_out=None
+            cm=np.hstack((np.reshape(cS[:,-3],(n,1)),np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1))))
+            cp=np.hstack((np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1)),np.reshape(cS[:,-2],(n,1))))
+            c=0.5*(cm+cp)
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=2, speed=c, solution=y, n=n, mx=nF, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+
         else:
-            raise NameError('Flux name {:} not implemented'.format(self.Flux_name))
+            raise NameError('Flux name {:} not implemented'.format(ctx['Flux_name']))
         
-        
+        u_out=self.vectorize_partition(Flux,'F',ctx)
+        j_out=None
         return u_out,j_out
 
         
@@ -262,80 +257,32 @@ class Advection1D:
         uF_in=self.unvectorize_partition(uF_in,'F',ctx)
         
         if(ctx['Flux_name']=='1stOrderUpwindFV'):
-            F=np.zeros((n,nS+1),ctx['data-type'])
-            Flux=np.zeros((n,nS),ctx['data-type'])
-
-            y=uS_in
-
-            #debug_wind=[cF[:,nF-1][0]]
-            #debug_sol=[uF_in[:,nF-1][0]]
-
-
-            F[:,0]=cF[:,nF-1]*uF_in[:,nF-1]
-            for id_mx in range(1,nS):
-                F[:,id_mx]=cS[:,id_mx-1]*y[:,id_mx-1]
-                #debug_wind.append(cS[:,id_mx-1][0])
-                #debug_sol.append(y[:,id_mx-1][0])
-
-            F[:,nS]=cS[:,nS-1]*y[:,nS-1]
-            #debug_wind.append(cS[:,nS-1][0])
-            #debug_sol.append(y[:,nS-1][0])
-            #print('Slow:')
-            #print('Wind: {:}'.format(debug_wind))
-            #print('Sol : {:}'.format(debug_sol))
-            #stop
-            for id_mx in range(0,nS):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
-
-            u_out=Flux
-            u_out=self.vectorize_partition(u_out,'S',ctx)
-
-            j_out=None            
-        elif(ctx['Flux_name']=='1stOrderUpwindFVTest'):
-            F=np.zeros((n,nS+1),ctx['data-type'])
-            Flux=np.zeros((n,nS),ctx['data-type'])
-
-            y=np.hstack((np.reshape(uF_in[:,-1],(n,1)),uS_in))
-            c=np.hstack((np.reshape(cF[:,-1],(n,1)),cS))
-            for id_mx in range(nS+1):
-                F[:,id_mx]=c[:,id_mx]*y[:,id_mx]
-            for id_mx in range(0,nS):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
-            u_out=Flux
-            u_out=self.vectorize_partition(u_out,'S',ctx)
-            j_out=None            
-        elif(ctx['Flux_name']=='1stOrderUpwindFVTestStag'):
-            F=np.zeros((n,nS+1),ctx['data-type'])
-            Flux=np.zeros((n,nS),ctx['data-type'])
-
-            y=np.hstack((np.reshape(uF_in[:,-1],(n,1)),uS_in))
-            cm=np.hstack((np.reshape(cF[:,-1],(n,1)),cS))
-            cp=np.hstack((cS,np.reshape(cF[:,0],(n,1))))
+            y=np.hstack((np.reshape(uF_in[:,-1],(n,1)),uS_in,np.reshape(uF_in[:,0],(n,1))))
+            c=np.hstack((np.reshape(cF[:,-1],(n,1)),cS,np.reshape(cF[:,0],(n,1))))
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=y, n=n, mx=nS, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+        elif(ctx['Flux_name']=='1stOrderUpwindFVStag'):
+            y=np.hstack((np.reshape(uF_in[:,-1],(n,1)),uS_in,np.reshape(uF_in[:,0],(n,1))))
+            cm=np.hstack((np.reshape(cF[:,-1],(n,1)),cS,np.reshape(cF[:,0],(n,1))))
+            cp=np.hstack((cS,np.reshape(cF[:,0],(n,1)),np.reshape(cF[:,1],(n,1))))
             c=0.5*(cm+cp)
-            for id_mx in range(nS+1):
-                F[:,id_mx]=c[:,id_mx]*y[:,id_mx]
-            for id_mx in range(0,nS):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
-            u_out=Flux
-            u_out=self.vectorize_partition(u_out,'S',ctx)
-            j_out=None
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=y, n=n, mx=nS, dx=dx, ctx=ctx, ftype='1stOrderUpwindFV')
         elif(ctx['Flux_name']=='3rdOrderUpwindFD'):
-            
-            Flux=np.zeros((n,nS),ctx['data-type'])
-
             y=np.hstack((np.reshape(uF_in[:,-2],(n,1)),np.reshape(uF_in[:,-1],(n,1)),uS_in,np.reshape(uF_in[:,0],(n,1))))
-            c=cS
-
-            for id_mx in range(0,nS):
-                Flux[:,id_mx]=(c[:,id_mx]/dx)*((-1./6.)*y[:,id_mx]+(1.)*y[:,id_mx+1]+(-1./2.)*y[:,id_mx+2]+(-1./3.)*y[:,id_mx+3]) 
-            u_out=Flux
-            u_out=self.vectorize_partition(u_out,'S',ctx)
-            j_out=None            
+            c=np.hstack((np.reshape(cF[:,-2],(n,1)),np.reshape(cF[:,-1],(n,1)),cS,np.reshape(cF[:,0],(n,1))))
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=1, speed=c, solution=y, n=n, mx=nS, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+        elif(ctx['Flux_name'][0:13]=='FVStagVanLeer'):
+            y=np.hstack((np.reshape(uF_in[:,-2],(n,1)),np.reshape(uF_in[:,-1],(n,1)),uS_in,np.reshape(uF_in[:,0],(n,1)),np.reshape(uF_in[:,1],(n,1))))
+            
+            cm=np.hstack((np.reshape(cF[:,-3],(n,1)),np.reshape(cF[:,-2],(n,1)),np.reshape(cF[:,-1],(n,1)),cS,np.reshape(cF[:,0],(n,1)),np.reshape(cF[:,1],(n,1))))
+            cp=np.hstack((np.reshape(cF[:,-2],(n,1)),np.reshape(cF[:,-1],(n,1)),cS,np.reshape(cF[:,0],(n,1)),np.reshape(cF[:,1],(n,1)),np.reshape(cF[:,-2],(n,1))))
+            c=0.5*(cm+cp)
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=2, speed=c, solution=y, n=n, mx=nS, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
         else:
-            raise NameError('Flux name {:} not implemented'.format(self.Flux_name))
+            raise NameError('Flux name {:} not implemented'.format(ctx['Flux_name']))
 
         
-        
+        u_out=self.vectorize_partition(Flux,'S',ctx)
+        j_out=None    
         return u_out,j_out
 
     
@@ -356,51 +303,40 @@ class Advection1D:
             raise NotImplemented
 
         y_in=unvec(u_in,ctx)
+ #       if(ctx['Flux_name']=='1stOrderUpwindFV'):
+ ##           F=np.zeros((n,mx+1),ctx['data-type'])
+ #           Flux=np.zeros((n,mx),ctx['data-type'])
+ #           y=y_in
+ #           F[:,0]=cv[:,-1]*y[:,-1]
+ #           for id_mx in range(1,mx):
+ #               F[:,id_mx]=cv[:,id_mx-1]*y[:,id_mx-1]
+ #           F[:,mx]=cv[:,mx-1]*y[:,mx-1]
+ #           for id_mx in range(0,mx):
+ #               Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
+ #           
         if(ctx['Flux_name']=='1stOrderUpwindFV'):
-
-            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints=None, bc_l=None, bc_r=None, solution=None, n=-1, mx=-1, time=None, ftype=None)
-            F=np.zeros((n,mx+1),ctx['data-type'])
-            Flux=np.zeros((n,mx),ctx['data-type'])
-            y=y_in
-            F[:,0]=cv[:,-1]*y[:,-1]
-            for id_mx in range(1,mx):
-                F[:,id_mx]=cv[:,id_mx-1]*y[:,id_mx-1]
-            F[:,mx]=cv[:,mx-1]*y[:,mx-1]
-            for id_mx in range(0,mx):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
-            
-        elif(ctx['Flux_name']=='1stOrderUpwindFVTest'):
-            F=np.zeros((n,mx+1),ctx['data-type'])
-            Flux=np.zeros((n,mx),ctx['data-type'])
-            y=np.hstack((np.reshape(y_in[:,-1],(n,1)),y_in))
-            c=np.hstack((np.reshape(cv[:,-1],(n,1)),cv))
-            
-            for id_mx in range(mx+1):
-                F[:,id_mx]=c[:,id_mx]*y[:,id_mx]
-            for id_mx in range(0,mx):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])
-                
-        elif(ctx['Flux_name']=='1stOrderUpwindFVTestStag'):
-            F=np.zeros((n,mx+1),ctx['data-type'])
-            Flux=np.zeros((n,mx),ctx['data-type'])
-            y=np.hstack((np.reshape(y_in[:,-1],(n,1)),y_in))
-            cm=np.hstack((np.reshape(cv[:,-1],(n,1)),cv))
-            cp=np.hstack((cv,np.reshape(cv[:,0],(n,1))))
+            y=np.hstack((np.reshape(y_in[:,-1],(n,1)),y_in,np.reshape(y_in[:,0],(n,1))))
+            c=np.hstack((np.reshape(cv[:,-1],(n,1)),cv,np.reshape(cv[:,0],(n,1))))
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=y, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+        elif(ctx['Flux_name']=='1stOrderUpwindFVStag'):
+            y=np.hstack((np.reshape(y_in[:,-1],(n,1)),y_in,np.reshape(y_in[:,0],(n,1))))
+            cm=np.hstack((np.reshape(cv[:,-1],(n,1)),cv,np.reshape(cv[:,0],(n,1))))
+            cp=np.hstack((cv,np.reshape(cv[:,0],(n,1)),np.reshape(cv[:,1],(n,1))))
             c=0.5*(cm+cp)
-            for id_mx in range(mx+1):
-                F[:,id_mx]=c[:,id_mx]*y[:,id_mx]
-            for id_mx in range(0,mx):
-                Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])        
-            u_out=Flux        
-            j_out=None
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=y, n=n, mx=mx, dx=dx, ctx=ctx, ftype='1stOrderUpwindFV')
+        elif(ctx['Flux_name'][0:13]=='FVStagVanLeer'):
+            y=np.hstack((np.reshape(y_in[:,-2],(n,1)),np.reshape(y_in[:,-1],(n,1)),y_in,np.reshape(y_in[:,0],(n,1)),np.reshape(y_in[:,1],(n,1))))
+            
+            cm=np.hstack((np.reshape(cv[:,-3],(n,1)),np.reshape(cv[:,-2],(n,1)),np.reshape(cv[:,-1],(n,1)),cv,np.reshape(cv[:,0],(n,1)),np.reshape(cv[:,1],(n,1))))
+            cp=np.hstack((np.reshape(cv[:,-2],(n,1)),np.reshape(cv[:,-1],(n,1)),cv,np.reshape(cv[:,0],(n,1)),np.reshape(cv[:,1],(n,1)),np.reshape(cv[:,-2],(n,1))))
+            c=0.5*(cm+cp)
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=2, speed=c, solution=y, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
         elif(ctx['Flux_name']=='3rdOrderUpwindFD'):
-            Flux=np.zeros((n,mx),ctx['data-type'])
             y=np.hstack((np.reshape(y_in[:,-2],(n,1)),np.reshape(y_in[:,-1],(n,1)),y_in,np.reshape(y_in[:,0],(n,1))))
-                        
-            for id_mx in range(mx):    
-                Flux[:,id_mx]=(cv[:,id_mx]/dx)*((-1./6.)*y[:,id_mx]+(1.)*y[:,id_mx+1]+(-1./2.)*y[:,id_mx+2]+(-1./3.)*y[:,id_mx+3]) 
+            c=np.hstack((np.reshape(cv[:,-2],(n,1)),np.reshape(cv[:,-1],(n,1)),cv,np.reshape(cv[:,0],(n,1))))     
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=1, speed=c, solution=y, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
         else:
-            raise NameError('Flux name {:} not implemented'.format(self.Flux_name))
+            raise NameError('Flux name {:} not implemented'.format(ctx['Flux_name']))
 
         u_out=vec(Flux,ctx)
         j_out=None
