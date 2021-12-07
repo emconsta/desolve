@@ -1318,7 +1318,7 @@ class DESolver:
         
         dt_tab=np.logspace(grid['start_exponent'], grid['end_exponent'], grid['points'])
         #print(dt_tab)
-        T_end=20
+        T_end=problem_setup['T_DURATION']['end']
         NSteps=np.zeros(dt_tab.shape,dtype=int)
         for i in range(dt_tab.size):
             NSteps[i]=round(T_end/dt_tab[i])
@@ -1364,6 +1364,7 @@ class DESolver:
             self.solve()
             
             t_ref,u_ref,glee_ref,_,_=self.get_trajectory_GLEE()
+            uref_end=self.get_solution()
         elif(problem.exact_solution is None and RefSol is not None):
             print("Reference solution is provided. Reusing it.")
             u_ref=RefSol['u_ref']
@@ -1371,7 +1372,7 @@ class DESolver:
             ref_dt=RefSol['ref_dt']
             t_ref=RefSol['t_ref']
             glee_ref=RefSol['glee_ref']
-            
+            uref_end=RefSol['uref_end']
             print("Reference solution at final time {:} computed by {:} with time step {:}.".format(t_ref[-1],method_ref,ref_dt))
         else:
             raise NotImplementedError
@@ -1411,11 +1412,11 @@ class DESolver:
             self.solve()
 
             t,u,glee,el,uh=self.get_trajectory_GLEE()
-
+            u_end=self.get_solution()
             sol_t.append(t.copy())
             sol_u.append(u.copy())
             sol_tf.append(t[-1])
-            sol_uf.append(u[:,-1])
+            sol_uf.append(u_end)
             sol_glee.append(glee)
             if(glee is not None):
                 sol_gleef.append(glee[:,-1])
@@ -1424,7 +1425,7 @@ class DESolver:
                 sol_uhf.append(uh[:,-1])
 
                 
-            err_tab_tf.append(np.linalg.norm(np.squeeze(np.asarray(sol_uf)[:]-u_ref[:,-1]),ord=2))
+            err_tab_tf.append(np.linalg.norm(np.squeeze(np.asarray(u_end)[:]-u_ref[:,-1]),ord=2))
 
-        RS={'t_ref':t_ref,'u_ref':u_ref,'glee_ref':glee_ref,'method_ref':method_ref, 'ref_dt':ref_dt}
+        RS={'t_ref':t_ref,'u_ref':u_ref,'uref_end':uref_end,'glee_ref':glee_ref,'method_ref':method_ref, 'ref_dt':ref_dt}
         return dt_tab, sol_t, sol_u, sol_uf, sol_tf, err_tab_tf, sol_glee, sol_gleef,RS,sol_el,sol_uh,sol_uhf

@@ -7,6 +7,8 @@ def ProblemsPDE(name,problem_ctx=None):
   
     if(name=='Advection Reaction 1D'):
         problem = AdvectionReaction1D(problem_ctx)
+    elif(name=='Advection Reaction 1D Split'):
+        problem = AdvectionReaction1DSplit(problem_ctx)
     elif(name=='GrayScott'):
         problem = GrayScott(problem_ctx)
     elif(name=='Navier-Stokes2D'):
@@ -31,10 +33,13 @@ def ProblemsPDE(name,problem_ctx=None):
     return rhs_e, rhs_i, u_ini, problem_setup, problem
 
 
-def LinearAdvectionSemiDiscretization1D(ghostPoints_l=None, ghostPoints_r=None, bc_l=None, bc_r=None, speed=None, solution=None, n=-1, mx=-1, time=None, dx=None, ctx=None, ftype=None):
+def LinearAdvectionSemiDiscretization1D(ghostPoints_l=None, ghostPoints_r=None, bc_l=None, bc_r=None, speed=None, solution=None, n=-1, mx=-1, time=None, dx=None, ctx=None, ftype=None, jac=False):
     assert mx>0
     assert n>0
 
+    if (jac is False):
+        Jac = None
+    
     if(ftype=='1stOrderUpwindFV'):
         F=np.zeros((n,mx+1),ctx['data-type'])
         Flux=np.zeros((n,mx),ctx['data-type'])
@@ -48,52 +53,94 @@ def LinearAdvectionSemiDiscretization1D(ghostPoints_l=None, ghostPoints_r=None, 
             F[:,id_mx]=c[:,id_mx]*y[:,id_mx]
         for id_mx in range(0,mx):
             Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])
+
+        if(jac):
+            Jac11=np.zeros((mx,mx),ctx['data-type'])
+
+            Jac11[0,mx-1]= (1./dx)*c[0,0]
+            Jac11[0,0]  =-(1./dx)*c[0,1]
+            
+            for id_mx in range(1,mx-1):
+                Jac11[id_mx,id_mx-1]= (1./dx)*c[0,id_mx]
+                Jac11[id_mx,id_mx]  =-(1./dx)*c[0,id_mx+1]
+
+            Jac11[mx-1,mx-1] = -(1./dx)*c[0,mx]
+            Jac11[mx-1,0]    = (1./dx)*c[0,mx+1]
+
+            Jac22=np.zeros((mx,mx),ctx['data-type'])
+
+            Jac22[0,mx-1]= (1./dx)*c[1,0]
+            Jac22[0,0]  =-(1./dx)*c[1,1]
+            
+            for id_mx in range(1,mx-1):
+                Jac22[id_mx,id_mx-1]= (1./dx)*c[1,id_mx]
+                Jac22[id_mx,id_mx]  =-(1./dx)*c[1,id_mx+1]
+
+            Jac22[mx-1,mx-1] = -(1./dx)*c[1,mx]
+            Jac22[mx-1,0]    = (1./dx)*c[1,mx+1]
+
+
+            ZB=np.zeros((mx,mx))
+            Jac1=np.hstack((Jac11,ZB))
+            Jac2=np.hstack((ZB,Jac22))
+            Jac=np.vstack((Jac1,Jac2))    
             
     elif(ctx['Flux_name']=='3rdOrderUpwindFD'):
         Flux=np.zeros((n,mx),ctx['data-type'])
-
-        assert ghostPoints_l==2,'Need to provide exactly two ghost points'
-
         y=solution
         c=speed
-        
-        for id_mx in range(mx):    
-            Flux[:,id_mx]=(c[:,id_mx+2]/dx)*((-1./6.)*y[:,id_mx]+(1.)*y[:,id_mx+1]+(-1./2.)*y[:,id_mx+2]+(-1./3.)*y[:,id_mx+3])
+
+        #assert ghostPoints_l==2,'Need to provide exactly two ghost points'
+
+        if(ghostPoints_l==2):        
+            for id_mx in range(mx):    
+                Flux[:,id_mx]=(c[:,id_mx+2]/dx)*((-1./6.)*y[:,id_mx]+(1.)*y[:,id_mx+1]+(-1./2.)*y[:,id_mx+2]+(-1./3.)*y[:,id_mx+3])
+        elif(ghostPoints_l==1):
+            Flux[:,0]=(c[:,0+2]/dx)*((1./3.)*y[:,0]+(1./2)*y[:,1]+(-1.)*y[:,2]+(1./6.)*y[:,3])
+            Flux[:,1]=(c[:,1+2]/dx)*((-1./12.)*y[:,0]+(2./3.)*y[:,1]+(-2./3.)*y[:,2]+(1./12.)*y[:,3])
+            for id_mx in range(2,mx):    
+                Flux[:,id_mx]=(c[:,id_mx+2]/dx)*((-1./6.)*y[:,id_mx]+(1.)*y[:,id_mx+1]+(-1./2.)*y[:,id_mx+2]+(-1./3.)*y[:,id_mx+3])
+    
     elif(ftype[0:13]=='FVStagVanLeer'):
         F=np.zeros((n,mx+1),ctx['data-type'])
         Flux=np.zeros((n,mx),ctx['data-type'])
         
         assert ghostPoints_l==2,'Need to provide exactly two ghost point'
         assert ghostPoints_r==2,'Need to provide exactly two ghost point'
-        if(ftype=='FVStagVanLeer-k=1'):
+        if(ftype=='FVStagVanLeer-k=1'):  # second order central
             kappa = 1.
-        if(ftype=='FVStagVanLeer-k=-1'):
+        if(ftype=='FVStagVanLeer-k=-1'): # second order upwind
             kappa = -1.
-        if(ftype=='FVStagVanLeer-k=1/3'):
+        if(ftype=='FVStagVanLeer-k=1/3'): # third orderr
             kappa = 1./3.
-        if(ftype=='FVStagVanLeer-k=0'):
+        if(ftype=='FVStagVanLeer-k=0'):  # Fromm scheme (second order)
             kappa = 0.
         
         y=solution
         c=speed
-
-        for id_mx in range(mx+1):
-            if(c[:,id_mx]>=0):
-                omega_j=y[:,id_mx+2]
-                omega_jm1=y[:,id_mx+1]
-                omega_jm2=y[:,id_mx]
-                F[:,id_mx]=c[:,id_mx+2]*(omega_jm1+(omega_jm1-omega_jm2)*(1.-kappa)/4.+(omega_j-omega_jm1)*(1.+kappa)/4.)
-            else:
-                omega_jm1=-y[:,id_mx+2]
-                omega_j=-y[:,id_mx+1]
-                omega_jp1=-y[:,id_mx]
-                F[:,id_mx]=c[:,id_mx+2]*(omega_j+(omega_j-omega_jp1)*(1.-kappa)/4.+(omega_jm1-omega_j)*(1.+kappa)/4.)
+        for id_n in range(n):
+            for id_mx in range(mx+1):
+                if(c[id_n,id_mx]>=0):
+                    omega_j=y[id_n,id_mx+2]
+                    omega_jm1=y[id_n,id_mx+1]
+                    omega_jm2=y[id_n,id_mx]
+                    F[id_n,id_mx]=c[id_n,id_mx+2]*(omega_jm1+(omega_jm1-omega_jm2)*(1.-kappa)/4.+(omega_j-omega_jm1)*(1.+kappa)/4.)
+                else:
+                    omega_jm1=-y[id_n,id_mx+2]
+                    omega_j=-y[id_n,id_mx+1]
+                    omega_jp1=-y[id_n,id_mx]
+                    F[id_n,id_mx]=c[id_n,id_mx+2]*(omega_j+(omega_j-omega_jp1)*(1.-kappa)/4.+(omega_jm1-omega_j)*(1.+kappa)/4.)
             
         for id_mx in range(0,mx):
             Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])
     else:
         raise NameError('{:} discretization type not implemented'.format(ctx['Flux_name']))
-    return Flux
+
+
+    if(Jac is None):
+        return Flux
+    else:
+        return Flux, Jac
 
 class Advection1D:
     def __init__(self,problem_ctx=None):
@@ -220,7 +267,7 @@ class Advection1D:
             y=np.hstack((np.reshape(uS_in[:,-2],(n,1)),np.reshape(uS_in[:,-1],(n,1)),uF_in,np.reshape(uS_in[:,0],(n,1)),np.reshape(uS_in[:,1],(n,1))))
             
             cm=np.hstack((np.reshape(cS[:,-3],(n,1)),np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1))))
-            cp=np.hstack((np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1)),np.reshape(cS[:,-2],(n,1))))
+            cp=np.hstack((np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1)),np.reshape(cS[:,2],(n,1))))
             c=0.5*(cm+cp)
             Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=2, speed=c, solution=y, n=n, mx=nF, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
 
@@ -577,7 +624,7 @@ class AdvectionDiffusion1D:
             y=np.hstack((np.reshape(uS_in[:,-2],(n,1)),np.reshape(uS_in[:,-1],(n,1)),uF_in,np.reshape(uS_in[:,0],(n,1)),np.reshape(uS_in[:,1],(n,1))))
             
             cm=np.hstack((np.reshape(cS[:,-3],(n,1)),np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1))))
-            cp=np.hstack((np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1)),np.reshape(cS[:,-2],(n,1))))
+            cp=np.hstack((np.reshape(cS[:,-2],(n,1)),np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1)),np.reshape(cS[:,1],(n,1)),np.reshape(cS[:,2],(n,1))))
             c=0.5*(cm+cp)
             Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=2, speed=c, solution=y, n=n, mx=nF, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
 
@@ -759,12 +806,13 @@ class AdvectionDiffusion1D:
 
 class AdvectionReaction1D:
     def __init__(self,problem_ctx=None):
-
+        self.exact_solution=None
         s=problem_ctx['s']
         alpha=problem_ctx['alpha']
         n=problem_ctx['n']
         mx=problem_ctx['mx']
         Flux_type=problem_ctx['Flux']
+        Flux_name=problem_ctx['Flux_name']
 
         if('Flux_c' in problem_ctx.keys()):
             Flux_c=problem_ctx['Flux_c']
@@ -788,7 +836,16 @@ class AdvectionReaction1D:
            raise Error
         else:
             ctx={}
-            ctx['alpha']=problem_ctx['alpha']
+            if('alpha' in problem_ctx.keys()):
+                ctx['alpha']=problem_ctx['alpha']
+            if('alpha_vec' in problem_ctx.keys()):
+                ctx['alpha_vec']=problem_ctx['alpha_vec']
+            
+            if('alpha_i' in problem_ctx.keys()):
+                ctx['alpha_i']=problem_ctx['alpha_i']
+            if('alpha_i_vec' in problem_ctx.keys()):
+                ctx['alpha_i_vec']=problem_ctx['alpha_vec_i_vec']
+
             ctx['s']=problem_ctx['s']
             ctx['mx']=problem_ctx['mx']
             ctx['n']=problem_ctx['n']
@@ -801,6 +858,9 @@ class AdvectionReaction1D:
                 ctx['Flux_cv']=problem_ctx['Flux_cv']
             else:
                 raise NotImplemented
+            ctx['Flux_name']=problem_ctx['Flux_name']
+            ctx['BC']=problem_ctx['BC']
+            ctx['IC']=problem_ctx['IC']
             ctx['dx']=dx
             ctx['x_coord']=x_coord
             ctx['vectorize']=self.vectorize
@@ -821,9 +881,12 @@ class AdvectionReaction1D:
         u_ini_pde=np.zeros((n,mx),problem_setup['context']['data-type'])
 
 
-
-        u_ini_pde[0,:]=1.0+s[1]*x_coord
-        u_ini_pde[1,:]=(kappa[0]/kappa[1])* u_ini_pde[0,:]+s[1]/kappa[1]
+        if(ctx['IC']=='Hundsdorfer'):
+            u_ini_pde[0,:]=1.0+s[1]*x_coord
+            u_ini_pde[1,:]=(kappa[0]/kappa[1])* u_ini_pde[0,:]+s[1]/kappa[1]
+        elif(ctx['IC']=='Test1'):
+            u_ini_pde[0,:]=1.0+np.sin(2*x_coord*np.pi*2)
+            u_ini_pde[1,:]=np.sin(2*x_coord*np.pi*4)
 
         self._dx=ctx['dx']
         self._n=ctx['n']
@@ -867,7 +930,7 @@ class AdvectionReaction1D:
         y=unvec(u_in,ctx)
 
 
-        yb=np.asarray([1-np.sin(12*t)**4,0]).reshape(2,)
+        
         
         #F[:,0]=cv[:,-1]*yb[:]
         #for id_mx in range(1,mx):
@@ -879,36 +942,98 @@ class AdvectionReaction1D:
         
 
 
-        Flux[0,0]=alpha[0]*((1./3.)*yb[0]+(0.5)*y[0,0]+(-1.)*y[0,1]+(1./6.)*y[0,2])/dx
-        if(alpha[1]!=0):
-            Flux[1,0]=alpha[1]*((1./3.)*yb[1]+(0.5)*y[1,0]+(-1.)*y[1,1]+(1./6.)*y[1,2])/dx
-        
-        Flux[0,1]=alpha[0]*((-1./12.)*yb[0]+(2./3.)*y[0,0]+(-2./3.)*y[0,2]+(1./12.)*y[0,3])/dx
-        if(alpha[1]!=0):
-            Flux[1,1]=alpha[1]*((-1./12.)*yb[1]+(2./3.)*y[1,0]+(-2./3.)*y[1,2]+(1./12.)*y[1,3])/dx
-        
-        for i in range(2,mx-2): 
-            Flux[0,i]=alpha[0]*((-1./12.)*y[0,i-2]+(2./3.)*y[0,i-1]+(-2./3.)*y[0,i+1]+(1./12.)*y[0,i+2])/dx
+        if('alpha' in ctx.keys()):
+            c=ctx['alpha']
+            cv=np.zeros((n,mx))
+            cv[0,:]=c[0]
+            cv[1,:]=c[1]
+        elif('alpha_vec' in ctx.keys()):
+            cv=ctx['alpha_vec']
+        else:
+            raise NotImplemented
 
-        if(alpha[1]!=0):
-            for i in range(2,mx-2):
-                Flux[1,i]=alpha[1]*((-1./12.)*y[1,i-2]+(2./3.)*y[1,i-1]+(-2./3.)*y[1,i+1]+(1./12.)*y[1,i+2])/dx
-        
-        
-        Flux[0,mx-2]=alpha[0]*((-1./6.)*y[0,mx-4]+(1.)*y[0,mx-3]+(-0.5)*y[0,mx-2]+(-1./3.)*y[0,mx-1])/dx
-        if(alpha[1]!=0):
-            Flux[1,mx-2]=alpha[1]*((-1./6.)*y[1,mx-4]+(1.)*y[1,mx-3]+(-0.5)*y[1,mx-2]+(-1./3.)*y[2,mx-1])/dx
-        
-        
-        Flux[0,mx-1]=-alpha[0]*(y[0,mx-1]-y[0,mx-2])/dx
-        
-        if(alpha[1]!=0):
-            Flux[1,mx-1]=-alpha[1]*(y[1,mx-1]-y[1,mx-2])/dx
+        if(ctx['BC']=='Hundsdorfer'):
+            yb=np.asarray([1-np.sin(12*t)**4,0]).reshape(2,)
+            yb_left=yb
+            yb_right=0
+        elif(ctx['BC']=='periodic'):
+            yb_left=np.zeros((n,2))
+            yb_right=np.zeros((n,2))
 
+            yb_left[:,0]=y[:,-2]
+            yb_left[:,1]=y[:,-1]
+            yb_right[:,0]=y[:,0]
+            yb_right[:,1]=y[:,1]
 
-        for i in range(mx):
-            Flux[:,i]=Flux[:,i]+np.reshape(s[:],(2,))
+            c_left=np.zeros((n,2))
+            c_right=np.zeros((n,2))
+
+            c_left[:,0]=cv[:,-2]
+            c_left[:,1]=cv[:,-1]
+            c_right[:,0]=cv[:,0]
+            c_right[:,1]=cv[:,1]
+
+        if(ctx['Flux_name']=='1stOrderUpwindFV'):
+            u=np.hstack((np.reshape(yb_left[:,1],(n,1)),y,np.reshape(yb_right[:,1],(n,1))))
+            w=np.hstack((np.reshape(c_left[:,1],(n,1)),cv,np.reshape(c_right[:,1],(n,1))))
             
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=w, solution=u, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+
+        elif(ctx['Flux_name']=='1stOrderUpwindFVStag'):       
+            u=np.hstack((np.reshape(yb_left[:,1],(n,1)),y,np.reshape(yb_right[:,1],(n,1))))
+
+            cm=np.hstack((np.reshape(c_left[:,:],(n,2)),cv))
+            cp=np.hstack((np.reshape(c_left[:,1],(n,1)),cv,np.reshape(c_right[:,1],(n,1))))
+            c=0.5*(cm+cp)
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=u, n=n, mx=mx, dx=dx, ctx=ctx, ftype='1stOrderUpwindFV')
+    
+        elif(ctx['Flux_name']=='3rdOrderUpwindFD'):            
+            u=np.hstack((np.reshape(yb_left[:,:],(n,2)),y,np.reshape(yb_right[:,:],(n,2))))
+            w=np.hstack((np.reshape(c_left[:,:],(n,2)),cv,np.reshape(c_right[:,:],(n,2))))
+
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=1, speed=w, solution=u, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+
+        elif(ctx['Flux_name'][0:13]=='FVStagVanLeer'):
+            u=np.hstack((np.reshape(yb_left[:,:],(n,2)),y,np.reshape(yb_right[:,:],(n,2))))
+            wm=np.hstack((np.reshape(cv[:,-3],(n,1)),np.reshape(c_left[:,:],(n,2)),cv,np.reshape(c_right[:,:],(n,2))))
+            wp=np.hstack((np.reshape(c_left[:,:],(n,2)),cv,np.reshape(c_right[:,:],(n,2)),np.reshape(cv[:,2],(n,1))))
+
+            c=0.5*(wm+wp)
+            Flux=LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=2, speed=c, solution=u, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+
+        elif(ctx['Flux_name']=='Hundsdorfer'):
+            Flux[0,0]=alpha[0]*((1./3.)*yb_left[0]+(0.5)*y[0,0]+(-1.)*y[0,1]+(1./6.)*y[0,2])/dx
+            if(alpha[1]!=0):
+                Flux[1,0]=alpha[1]*((1./3.)*yb_left[1]+(0.5)*y[1,0]+(-1.)*y[1,1]+(1./6.)*y[1,2])/dx
+            
+            Flux[0,1]=alpha[0]*((-1./12.)*yb_left[0]+(2./3.)*y[0,0]+(-2./3.)*y[0,2]+(1./12.)*y[0,3])/dx
+            if(alpha[1]!=0):
+                Flux[1,1]=alpha[1]*((-1./12.)*yb_left[1]+(2./3.)*y[1,0]+(-2./3.)*y[1,2]+(1./12.)*y[1,3])/dx
+            
+            for i in range(2,mx-2): 
+                Flux[0,i]=alpha[0]*((-1./12.)*y[0,i-2]+(2./3.)*y[0,i-1]+(-2./3.)*y[0,i+1]+(1./12.)*y[0,i+2])/dx
+
+            if(alpha[1]!=0):
+                for i in range(2,mx-2):
+                    Flux[1,i]=alpha[1]*((-1./12.)*y[1,i-2]+(2./3.)*y[1,i-1]+(-2./3.)*y[1,i+1]+(1./12.)*y[1,i+2])/dx
+            
+            
+            Flux[0,mx-2]=alpha[0]*((-1./6.)*y[0,mx-4]+(1.)*y[0,mx-3]+(-0.5)*y[0,mx-2]+(-1./3.)*y[0,mx-1])/dx
+            if(alpha[1]!=0):
+                Flux[1,mx-2]=alpha[1]*((-1./6.)*y[1,mx-4]+(1.)*y[1,mx-3]+(-0.5)*y[1,mx-2]+(-1./3.)*y[2,mx-1])/dx
+            
+            
+            Flux[0,mx-1]=-alpha[0]*(y[0,mx-1]-y[0,mx-2])/dx
+            
+            if(alpha[1]!=0):
+                Flux[1,mx-1]=-alpha[1]*(y[1,mx-1]-y[1,mx-2])/dx
+
+
+            for i in range(mx):
+                Flux[:,i]=Flux[:,i]+np.reshape(s[:],(2,))
+        else:
+            raise NameError('Flux name {:} not implemented'.format(ctx['Flux_name']))
+ 
         u_out=vec(Flux,ctx)
         
         j_out=None
@@ -925,24 +1050,307 @@ class AdvectionReaction1D:
         kappa=ctx['kappa']
         
         F=np.zeros((n,mx),ctx['data-type'])
+        
+        K=np.asarray([[-kappa[0],kappa[1]],[kappa[0], -kappa[1]]])
+              
+        y=unvec(u_in,ctx)
+
+        for id_mx in range(mx):
+            F[:,id_mx]=np.matmul(K,y[:,id_mx])
+        
+        # Advection
+        
+        if('alpha_i' in ctx.keys()):
+            c=ctx['alpha_i']
+            cv=np.zeros((n,mx))
+            cv[0,:]=c[0]
+            cv[1,:]=c[1]
+            ImplicitAdvection=True
+        elif('alpha_i_vec' in ctx.keys()):
+            cv=ctx['alpha_i_vec']
+            ImplicitAdvection=True
+        else:
+            ImplicitAdvection=False
+
+        if(ImplicitAdvection==True):
+            if(ctx['BC']=='Hundsdorfer'):
+                yb=np.asarray([1-np.sin(12*t)**4,0]).reshape(2,)
+                yb_left=yb
+                yb_right=0
+            elif(ctx['BC']=='periodic'):
+                yb_left=np.zeros((n,2))
+                yb_right=np.zeros((n,2))
+
+                yb_left[:,0]=y[:,-2]
+                yb_left[:,1]=y[:,-1]
+                yb_right[:,0]=y[:,0]
+                yb_right[:,1]=y[:,1]
+
+                c_left=np.zeros((n,2))
+                c_right=np.zeros((n,2))
+
+                c_left[:,0]=cv[:,-2]
+                c_left[:,1]=cv[:,-1]
+                c_right[:,0]=cv[:,0]
+                c_right[:,1]=cv[:,1]
+
+            if(ctx['Flux_name']=='1stOrderUpwindFV'):
+                u=np.hstack((np.reshape(yb_left[:,1],(n,1)),y,np.reshape(yb_right[:,1],(n,1))))
+                w=np.hstack((np.reshape(c_left[:,1],(n,1)),cv,np.reshape(c_right[:,1],(n,1))))
+                
+                Flux,JacAd = LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, 
+                                speed=w, solution=u, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'], jac=True)
+
+            elif(ctx['Flux_name']=='1stOrderUpwindFVStag'):       
+                raise NameError('Flux name {:} not implemented on the implicit side'.format(ctx['Flux_name']))
+            elif(ctx['Flux_name']=='3rdOrderUpwindFD'):            
+                raise NameError('Flux name {:} not implemented on the implicit side'.format(ctx['Flux_name']))
+            elif(ctx['Flux_name'][0:13]=='FVStagVanLeer'):
+                raise NameError('Flux name {:} not implemented on the implicit side'.format(ctx['Flux_name']))
+            elif(ctx['Flux_name']=='Hundsdorfer'):
+                raise NameError('Flux name {:} not implemented on the implicit side'.format(ctx['Flux_name']))
+            else:
+                raise NameError('Flux name {:} not implemented on th eimplicit side'.format(ctx['Flux_name']))
+
+
+
+        if(ImplicitAdvection==False):
+            u_out=vec(F,ctx)
+        else:
+            u_out=vec(F+Flux,ctx)
+
+        
+        K11=kappa[0]*np.eye(mx)
+        K12=kappa[1]*np.eye(mx)
+        K1=np.hstack(((-1)*K11,K12))
+        K2=np.hstack((K11,(-1)*K12))
+        j_out=np.vstack((K1,K2))
+
+        if(ImplicitAdvection==True):   
+            j_out+=JacAd
+
+        return u_out,j_out
+
+    def TotalMass(self,u_pde):
+        mass=0.
+        for i in range(self._mx):
+            for j in range(self._n):
+                mass+=self._dx*u_pde[j,i]
+        
+        return mass
+    
+    def vectorize(self,u_pde,pde_problem_ctx):
+        u_ode=np.reshape(u_pde.copy(),(pde_problem_ctx['mx']*pde_problem_ctx['n']))
+        return u_ode
+    
+    def unvectorize(self,u_ode,pde_problem_ctx):
+        u_pde=np.reshape(u_ode.copy(),(pde_problem_ctx['n'],pde_problem_ctx['mx']))
+        return u_pde
+    
+    def initial_solution(self):
+        return (self.u_ini)
+    
+    def get_problem_setup(self):
+        return (self.problem_setup)
+
+
+class AdvectionReaction1DSplit:
+    def __init__(self,problem_ctx=None):
+
+        s=problem_ctx['s']
+        alpha=problem_ctx['alpha']
+        alpha_i=problem_ctx['alpha_i']
+        n=problem_ctx['n']
+        mx=problem_ctx['mx']
+        Flux_type=problem_ctx['Flux']
+        Flux_name=problem_ctx['Flux_name']
+
+        if('Flux_c' in problem_ctx.keys()):
+            Flux_c=problem_ctx['Flux_c']
+        elif('Flux_cv' in problem_ctx.keys()):
+            Flux_cv=problem_ctx['Flux_cv']
+        else:
+            raise NotImplemented
+        
+        BC_type=problem_ctx['BC']
+        x_max=problem_ctx['x_max']
+        x_min=problem_ctx['x_min']
+        kappa=problem_ctx['kappa']
+        dx=float(x_max-x_min)/mx
+        
+        x_coord=np.zeros((mx,))
+
+        for i in range(mx):
+            x_coord[i]=((i+1.)*dx)+x_min
+
+        if(problem_ctx is None):
+           raise Error
+        else:
+            ctx={}
+            ctx['alpha']=problem_ctx['alpha']
+            ctx['alpha_i']=problem_ctx['alpha_i']
+            ctx['s']=problem_ctx['s']
+            ctx['mx']=problem_ctx['mx']
+            ctx['n']=problem_ctx['n']
+            ctx['x_min']=problem_ctx['x_min']
+            ctx['x_max']=problem_ctx['x_max']
+            ctx['Flux']=problem_ctx['Flux']
+            if('Flux_c' in problem_ctx.keys()):
+                ctx['Flux_c']=problem_ctx['Flux_c']
+            elif('Flux_cv' in problem_ctx.keys()):
+                ctx['Flux_cv']=problem_ctx['Flux_cv']
+            else:
+                raise NotImplemented
+            ctx['Flux_name']=problem_ctx['Flux_name']
+            ctx['dx']=dx
+            ctx['x_coord']=x_coord
+            ctx['vectorize']=self.vectorize
+            ctx['unvectorize']=self.unvectorize
+            ctx['kappa']=problem_ctx['kappa']
+            ctx['x_max']=problem_ctx['x_max']
+            ctx['x_min']=problem_ctx['x_min']
+
+        problem_setup={}
+        problem_setup['name']='Advection Reaction 1D Split'
+        problem_setup['context']=ctx
+        problem_setup['context']['data-type']=np.float64
+        problem_setup['DT']=1.0e-01
+        problem_setup['DT_REFERENCE']=1.0e-04
+        problem_setup['T_DURATION']={'start':0.,'end':5}
+        problem_setup['DT_INTERVAL']={'start':1e-03,'end':1e-01}
+
+        u_ini_pde=np.zeros((n,mx),problem_setup['context']['data-type'])
+
+
+
+        #u_ini_pde[0,:]=1.0+s[1]*x_coord
+        #u_ini_pde[1,:]=(kappa[0]/kappa[1])* u_ini_pde[0,:]+s[1]/kappa[1]
+
+
+        u_ini_pde[0,:]=1.0+x_coord
+        u_ini_pde[1,:]= u_ini_pde[0,:]*0.5
+
+        self._dx=ctx['dx']
+        self._n=ctx['n']
+        self._nF=int(ctx['mx']/2)
+        self._nS=ctx['mx']-int(ctx['mx']/2)
+        self._mx=ctx['mx']
+        ctx['nF']=self._nF
+        ctx['nS']=self._nS
+        
+        self.u_ini=self.vectorize(u_ini_pde,problem_ctx)
+        problem_setup['context']['u_ini']=self.u_ini
+        self.problem_setup=problem_setup
+    
+    def rhs_e(self,t,u_in,ctx=None):
+        vec=ctx['vectorize']
+        unvec=ctx['unvectorize']
+
+        s=ctx['s']
+        n=ctx['n']
+        mx=ctx['mx']
+        dx=ctx['dx']
+        alpha=ctx['alpha']
+        alpha_i=ctx['alpha_i']
+
+        if('Flux_c' in ctx.keys()):
+            c=ctx['Flux_c']
+            cv=np.zeros((n,mx))
+            cv[:]=c
+        elif('Flux_cv' in ctx.keys()):
+            cv=ctx['Flux_cv']
+        else:
+            raise NotImplemented
+
+        cv=np.zeros((n,mx))
+        cv[0,:]=alpha[0]
+        cv[1,:]=alpha[1]
+
+        Flux=np.zeros((n,mx),ctx['data-type'])
+        y_in=unvec(u_in,ctx)
+
+
+        yb=np.asarray([1-np.sin(12*t)**4,0]).reshape(2,)
+        
+        if(ctx['Flux_name']=='1stOrderUpwindFV'):
+            for i in range(n):
+                y=np.hstack((np.reshape(y_in[i,-1],(1,1)),np.reshape(y_in[i,:],(1,mx)),np.reshape(y_in[i,0],(1,1))))
+                c=np.hstack((np.reshape(cv[i,-1],(1,1)),np.reshape(cv[i,:],(1,mx)),np.reshape(cv[i,0],(1,1))))
+                Flux[i,:]=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=y, n=1, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'])
+                
+
+
+            
+        u_out=vec(Flux,ctx)
+        j_out=None
+        
+        return u_out,j_out
+    
+    def rhs_i(self,t,u_in,ctx=None):
+        vec=ctx['vectorize']
+        unvec=ctx['unvectorize']
+        
+        n=ctx['n']
+        mx=ctx['mx']
+        dx=ctx['dx']
+        kappa=ctx['kappa']
+        alpha_i=ctx['alpha_i']
+        
+        F=np.zeros((n,mx),ctx['data-type'])
 
 
         
         K=np.asarray([[-kappa[0],kappa[1]],[kappa[0], -kappa[1]]])
         
        
-        y=unvec(u_in,ctx)
+        y_in=unvec(u_in,ctx)
 
         for id_mx in range(mx):
-            F[:,id_mx]=np.matmul(K,y[:,id_mx])
-        
+            F[:,id_mx]=np.matmul(K,y_in[:,id_mx])
+            
         u_out=vec(F,ctx)
 
+
+
+
+        if('Flux_c' in ctx.keys()):
+            c=ctx['Flux_c']
+            cv=np.zeros((n,mx))
+            cv[:]=c
+        elif('Flux_cv' in ctx.keys()):
+            cv=ctx['Flux_cv']
+        else:
+            raise NotImplemented
+
+        cv=np.zeros((n,mx))
+        cv[0,:]=alpha_i[0]
+        cv[1,:]=alpha_i[1]
+
+        Flux=np.zeros((n,mx),ctx['data-type'])
+
+        Jacs=[]
+        
+        if(ctx['Flux_name']=='1stOrderUpwindFV'):
+            for i in range(n):
+                y=np.hstack((np.reshape(y_in[i,-1],(1,1)),np.reshape(y_in[i,:],(1,mx)),np.reshape(y_in[i,0],(1,1))))
+                c=np.hstack((np.reshape(cv[i,-1],(1,1)),np.reshape(cv[i,:],(1,mx)),np.reshape(cv[i,0],(1,1))))
+                Flux[i,:], Jac=LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, speed=c, solution=y, n=1, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'], jac=True)
+                Jacs.append(Jac)
+                
+        u_out+=vec(Flux,ctx)
+
+        
         K11=kappa[0]*np.eye(mx)
         K12=kappa[1]*np.eye(mx)
         K1=np.hstack(((-1)*K11,K12))
         K2=np.hstack((K11,(-1)*K12))
         j_out=np.vstack((K1,K2))
+
+        ZeroBlock=np.zeros((mx,mx))
+
+        B1=np.hstack((Jacs[0],ZeroBlock))
+        B2=np.hstack((ZeroBlock,Jacs[1]))
+        j_out+=np.vstack((B1,B2))
 
         return u_out,j_out
 
