@@ -72,10 +72,8 @@ class DESolver:
                 for i in range(sz):
                     ev=np.zeros((sz,))
                     ev[i]=eps
-                    self._function_context['noJacobian']=1
                     fyp,_=self._rhs_i(t, u_in+ev, self._function_context)
                     fym,_=self._rhs_i(t, u_in-ev, self._function_context)
-                    self._function_context.pop('noJacobian')
                     jac_fd[:,i]=(fyp-fym)/(2*eps)
                 
                 print("=============RHS_I===========================")
