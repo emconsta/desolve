@@ -47,6 +47,48 @@ class DESolver:
 
         self.reset()
 
+    def test_Jacobians(self, t=None, u_in=None, ctx=None, eps=1e-8):
+        if(u_in is None):
+            assert self._solution is not None, "A soulution must be defined, initialize the problem or provide a solution as argument."
+            u_in=self._solution
+        if(t is None):
+            t=self._t_start
+
+        if self._rhs is not None:
+            y,jac=self._rhs(t, u_in, self._function_context)
+            if(jac is None):
+                print("RHS function did not provide a Jacobian, skipping checks for this function")
+            else:
+                print(np.linalg.norm(jac))
+        
+        if self._rhs_i is not None:
+            fy,jac=self._rhs_i(t, u_in, self._function_context)
+            if(jac is None):
+                print("RHS_I function did not provide a Jacobian, skipping checks for this function")
+            else:
+                print("Computing the Jacobian for RHS_I function")
+                sz=u_in.size
+                jac_fd=np.zeros((sz,sz))
+                for i in range(sz):
+                    ev=np.zeros((sz,))
+                    ev[i]=eps
+                    self._function_context['noJacobian']=1
+                    fyp,_=self._rhs_i(t, u_in+ev, self._function_context)
+                    fym,_=self._rhs_i(t, u_in-ev, self._function_context)
+                    self._function_context.pop('noJacobian')
+                    jac_fd[:,i]=(fyp-fym)/(2*eps)
+                
+                print("=============RHS_I===========================")
+                print("Norm of the coded Jacobian: {:}".format(np.linalg.norm(jac)))
+                print("Norm of the finite difference Jacobian: {:}".format(np.linalg.norm(jac_fd)))
+                jac_diff=jac-jac_fd
+                print("Norm of the difference: {:}".format(np.linalg.norm(jac_diff)))
+                pos_max=np.unravel_index(np.argmax(jac_diff, axis=None), jac_diff.shape)
+                print("Maximum difference value position: {:} out of {:} with a value of {:}".format(pos_max,jac_diff.shape,jac_diff[pos_max[0],pos_max[1]]))
+                print("=============================================")
+                
+        return jac_diff,jac,jac_fd    
+
     def reset(self,soft=False):
         self._solved = False
         self._step = 0
