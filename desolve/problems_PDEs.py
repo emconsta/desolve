@@ -103,6 +103,13 @@ def LinearAdvectionSemiDiscretization1D(ghostPoints_l=None, ghostPoints_r=None, 
         
         y=solution
         c=speed
+
+        if(jac):
+            JacList=[]
+            for idx_n in range(n):
+                JacC=np.zeros((mx+ghostPoints_l+ghostPoints_r,mx+ghostPoints_l+ghostPoints_r),ctx['data-type'])
+                JacList.append(JacC.copy())
+
         for id_n in range(n):
             for id_mx in range(mx+1):
                 if(c[id_n,id_mx]>=0):
@@ -110,14 +117,38 @@ def LinearAdvectionSemiDiscretization1D(ghostPoints_l=None, ghostPoints_r=None, 
                     omega_jm1=y[id_n,id_mx+1]
                     omega_jm2=y[id_n,id_mx]
                     F[id_n,id_mx]=c[id_n,id_mx+2]*(omega_jm1+(omega_jm1-omega_jm2)*(1.-kappa)/4.+(omega_j-omega_jm1)*(1.+kappa)/4.)
+                    if(jac):
+                        JacList[id_n][id_mx,id_mx+1] = c[id_n,id_mx+2] * (1.-kappa/2.)
+                        JacList[id_n][id_mx,id_mx]   = c[id_n,id_mx+2] * (-1.+kappa)/4.
+                        JacList[id_n][id_mx,id_mx+2] = c[id_n,id_mx+2] * (1.+kappa)/4.
                 else:
                     omega_jm1=-y[id_n,id_mx+2]
                     omega_j=-y[id_n,id_mx+1]
                     omega_jp1=-y[id_n,id_mx]
                     F[id_n,id_mx]=c[id_n,id_mx+2]*(omega_j+(omega_j-omega_jp1)*(1.-kappa)/4.+(omega_jm1-omega_j)*(1.+kappa)/4.)
-            
+                    if(jac):
+                        raise NotImplementedError
         for id_mx in range(0,mx):
             Flux[:,id_mx]=-(1./dx)*(F[:,id_mx+1]-F[:,id_mx])
+
+        if(jac):
+
+            JacListCopy=[]
+            for idx_n in range(n):
+                JacC=np.zeros((mx+ghostPoints_l+ghostPoints_r,mx+ghostPoints_l+ghostPoints_r),ctx['data-type'])
+                JacListCopy.append(JacC.copy())
+
+            for id_n in range(n):
+                JacListCopy[id_n][2:mx+2,2:mx+2]= (1./dx)*(JacList[id_n][1:mx+1,3:mx+3]-JacList[id_n][1:mx+1,2:mx+2])
+                JacListCopy[id_n][2:4,mx:mx+2]    = (1./dx)*(JacList[id_n][1:3,1:3]-JacList[id_n][1:3,0:2])
+                JacListCopy[id_n][mx+1,2:4]     = (1./dx)*(JacList[id_n][mx,mx+3:mx+5]-JacList[id_n][mx,mx+2:mx+4])
+        if(jac):
+            J0=np.zeros((mx,mx))
+            JacList[0]=JacListCopy[0][2:mx+2,2:mx+2]
+            JacList[1]=JacListCopy[1][2:mx+2,2:mx+2]
+            K1=np.hstack((JacList[0],J0))
+            K2=np.hstack((J0,JacList[1]))
+            Jac=np.vstack((K1,K2))
     else:
         raise NameError('{:} discretization type not implemented'.format(ctx['Flux_name']))
 
@@ -1083,7 +1114,7 @@ class AdvectionReaction1D:
                 u=np.hstack((np.reshape(yb_left[:,1],(n,1)),y,np.reshape(yb_right[:,1],(n,1))))
                 w=np.hstack((np.reshape(c_left[:,1],(n,1)),cv,np.reshape(c_right[:,1],(n,1))))
                 
-                Flux,JacAd= LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, 
+                Flux,JacAd = LinearAdvectionSemiDiscretization1D(ghostPoints_l=1, ghostPoints_r=1, 
                                 speed=w, solution=u, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'], jac=True)
                 
             elif(ctx['Flux_name']=='1stOrderUpwindFVStag'):       
@@ -1091,11 +1122,18 @@ class AdvectionReaction1D:
             elif(ctx['Flux_name']=='3rdOrderUpwindFD'):            
                 raise NameError('Flux name {:} not implemented on the implicit side'.format(ctx['Flux_name']))
             elif(ctx['Flux_name'][0:13]=='FVStagVanLeer'):
-                raise NameError('Flux name {:} not implemented on the implicit side'.format(ctx['Flux_name']))
+                u=np.hstack((np.reshape(yb_left[:,:],(n,2)),y,np.reshape(yb_right[:,:],(n,2))))
+                wm=np.hstack((np.reshape(cv[:,-3],(n,1)),np.reshape(c_left[:,:],(n,2)),cv,np.reshape(c_right[:,:],(n,2))))
+                wp=np.hstack((np.reshape(c_left[:,:],(n,2)),cv,np.reshape(c_right[:,:],(n,2)),np.reshape(cv[:,2],(n,1))))
+
+                c=0.5*(wm+wp)
+                Flux,JacAd = LinearAdvectionSemiDiscretization1D(ghostPoints_l=2, ghostPoints_r=2, speed=c,
+                                solution=u, n=n, mx=mx, dx=dx, ctx=ctx, ftype=ctx['Flux_name'], jac=True)
+
             elif(ctx['Flux_name']=='Hundsdorfer'):
                 raise NameError('Flux name {:} not implemented on the implicit side'.format(ctx['Flux_name']))
             else:
-                raise NameError('Flux name {:} not implemented on th eimplicit side'.format(ctx['Flux_name']))
+                raise NameError('Flux name {:} not implemented on the implicit side'.format(ctx['Flux_name']))
 
         
 
