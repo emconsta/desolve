@@ -471,6 +471,90 @@ def Default_IMEX_MRK_Methods():
     IMEX_MRK['name']='MPRK2-RK3SSPHig-IMEX'
     AllMethods_IMEX_MRK.append(IMEX_MRK)
 
+
+
+    # MPRK2 m=4 - IMEX
+    IMEX_MRK={}
+    sB=2
+    m=4
+
+    AB=np.zeros((sB,sB))
+    AB[1,0]=1.0
+    
+    bB=np.zeros((sB))
+    bB[0]=1./2.
+    bB[1]=1./2
+    
+    cB=np.sum(AB,1)
+    
+    AF=np.zeros((sB*m,sB*m))
+    for k in range(m):
+        for i in range(sB):
+            for j in range(sB):
+                AF[i+k*sB,j+k*sB]=(1./m)*AB[i,j]
+    for k in range(1,m):
+        for ell in range(k):
+            for i in range(sB):
+                for j in range(sB):
+                    AF[k*sB+i,j+sB*ell]=bB[j]/m
+ 
+
+    bF=np.zeros((sB*m))
+    for k in range(m):
+        for i in range(sB):
+            bF[i+sB*k]=(1./m)*bB[i]
+    cF=np.sum(AF,1)
+
+    AS=np.zeros((sB*m,sB*m))
+    bS=np.zeros((sB*m)) 
+    for k in range(m):
+        for i in range(sB):
+            for j in range(sB):
+                AS[i+sB*k,j+sB*k]=AB[i,j]
+
+        for i in range(sB):
+            bS[i+sB*k]=bB[i]/m
+        
+    cS=np.sum(AS,1)
+
+
+    AT=np.zeros((m*sB,m*sB))
+    AT[sB*m-1,:]=1.
+   
+    bT=np.zeros((m*sB))
+    bT=bF[:]
+    cT=np.sum(AT,1)
+
+    
+    IMEX_MRK['type']='IMEX-MRK'
+    IMEX_MRK['AB']=AB
+    IMEX_MRK['bB']=bB
+    IMEX_MRK['cB']=cB
+    IMEX_MRK['sB']=np.size(bB)
+    IMEX_MRK['pB']=2
+
+    IMEX_MRK['AF']=AF
+    IMEX_MRK['bF']=bF
+    IMEX_MRK['cF']=cF
+    IMEX_MRK['sF']=np.size(bF)
+    IMEX_MRK['pF']=2
+
+    IMEX_MRK['AS']=AS
+    IMEX_MRK['bS']=bS
+    IMEX_MRK['cS']=cS
+    IMEX_MRK['sS']=np.size(bS)
+    IMEX_MRK['pS']=2
+
+    IMEX_MRK['AT']=AT
+    IMEX_MRK['bT']=bT
+    IMEX_MRK['cT']=cT
+    IMEX_MRK['sT']=np.size(bT)
+    IMEX_MRK['pT']=1
+    
+    
+    IMEX_MRK['name']='MPRK2-m4-IMEX'
+    AllMethods_IMEX_MRK.append(IMEX_MRK)
+
     
     return AllMethods_IMEX_MRK
 
