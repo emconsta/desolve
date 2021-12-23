@@ -35,6 +35,8 @@ class DESolver:
         self._rhs_i = None
         self._rhs_gint = None
 
+        
+
         self._r = None
         self._n = None
 
@@ -103,6 +105,15 @@ class DESolver:
         self._epsilon_trajectory = None
         self._epsilon_local_trajectory = None
         self._u_high_trajectory = None
+
+        self._perf_count_rhs = 0
+        self._perf_count_rhs_fast = 0
+        self._perf_count_rhs_slow = 0
+        self._perf_count_rhs_mr_implicit = 0
+        self._perf_count_rhs_e = 0
+        self._perf_count_rhs_i = 0
+        self._perf_count_rhs_gint = 0
+
         pass
     
     def GenerateOrderTestGrid(self, NRuns, t_min, t_max, dt_min, dt_max):
@@ -616,9 +627,10 @@ class DESolver:
 
                 KstageF[0:nF, istage], _ = self._rhs_fast(
                     t_stageF, YstageS[0:nS, istage], YstageF[0:nF, istage], self._function_context)
+                self._perf_count_rhs_fast += 1
                 KstageS[0:nS, istage], _ = self._rhs_slow(
                     t_stageS, YstageS[0:nS, istage], YstageF[0:nF, istage], self._function_context)
-
+                self._perf_count_rhs_slow += 1
             uF_out = uF_in.copy()
             uS_out = uS_in.copy()
 
@@ -829,6 +841,7 @@ class DESolver:
                 # print 't=',t
                 Kstage[0:n, istage], _ = self._rhs(
                     t_stage, Ystage[0:n, istage], self._function_context)
+                self._perf_count_rhs += 1
                 # print Kstage[0:n,istage]
             u_out = u_in.copy()
 
@@ -1015,6 +1028,7 @@ class DESolver:
                         Res_in = data[2]
                         f, _ = self._rhs_i(
                             t_stage_in, X, self._function_context)
+                        self._perf_count_rhs_i += 1
                         F = X-alpha*f-Res_in
                         return F
 
@@ -1024,6 +1038,7 @@ class DESolver:
                         Res_in = data[2]
                         f, Jac = self._rhs_i(
                             t_stage_in, X, self._function_context)
+                        self._perf_count_rhs_i += 1
                         J = np.eye(Jac.shape[0])-alpha*Jac
                         return J
 
@@ -1037,9 +1052,10 @@ class DESolver:
                     
                 KstageE[0:n, istage], _ = self._rhs_e(
                     t_stageE, Ystage[0:n, istage], self._function_context)
+                self._perf_count_rhs_e += 1
                 KstageI[0:n, istage], _ = self._rhs_i(
                     t_stageI, Ystage[0:n, istage], self._function_context)
-
+                self._perf_count_rhs_i += 1
             u_out = u_in.copy()
             
             for i in range(s):
