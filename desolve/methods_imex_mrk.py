@@ -158,8 +158,145 @@ def Default_IMEX_MRK_Methods():
     AllMethods_IMEX_MRK.append(IMEX_MRK)
 
 
+  
+    IMEX_MRK={}
+
+    AB=np.zeros((2,2))
+    AB[1,0]=1.
+    bB=np.zeros((2))
+    bB[0]=1/2.
+    bB[1]=1/2.
+    cB=np.sum(AB,1)
+
+
+    AF=np.zeros((4,4))
+    AF[1,0]=0.5
+    AF[2,0]=0.25
+    AF[2,1]=0.25
+    AF[3,0]=0.25
+    AF[3,1]=0.25
+    AF[3,2]=0.5
+    bF=np.zeros((4))
+    bF[0]=1/4.
+    bF[1]=1/4.
+    bF[2]=1/4.
+    bF[3]=1/4.
+    cF=np.sum(AF,1)
+  
+
+    AS=np.zeros((4,4))
+    AS[1,0]=1.
+    AS[3,2]=1.
+    bS=np.zeros((4))
+    bS=bF[:]
+    cS=np.sum(AS,1)
+
+    AT=np.zeros((4,4))
+    AT[3,0]=0.
+    AT[3,1]=0.
+    AT[3,2]=0.
+    AT[3,3]=1.0
+    bT=np.zeros((4))
+    bT=bF[:]
+    cT=np.sum(AT,1)
 
     
+    IMEX_MRK['type']='IMEX-MRK'
+    IMEX_MRK['AB']=AB
+    IMEX_MRK['bB']=bB
+    IMEX_MRK['cB']=cB
+    IMEX_MRK['sB']=np.size(bB)
+    IMEX_MRK['pB']=2
+
+    IMEX_MRK['AF']=AF
+    IMEX_MRK['bF']=bF
+    IMEX_MRK['cF']=cF
+    IMEX_MRK['sF']=np.size(bF)
+    IMEX_MRK['pF']=2
+
+    IMEX_MRK['AS']=AS
+    IMEX_MRK['bS']=bS
+    IMEX_MRK['cS']=cS
+    IMEX_MRK['sS']=np.size(bS)
+    IMEX_MRK['pS']=2
+
+    IMEX_MRK['AT']=AT
+    IMEX_MRK['bT']=bT
+    IMEX_MRK['cT']=cT
+    IMEX_MRK['sT']=np.size(bT)
+    IMEX_MRK['pT']=2
+    IMEX_MRK['name']='MPRK2-IMEX-BE'
+    AllMethods_IMEX_MRK.append(IMEX_MRK)
+
+    IMEX_MRK={}
+
+    AB=np.zeros((2,2))
+    AB[1,0]=1.
+    bB=np.zeros((2))
+    bB[0]=1/2.
+    bB[1]=1/2.
+    cB=np.sum(AB,1)
+
+
+    AF=np.zeros((4,4))
+    AF[1,0]=0.5
+    AF[2,0]=0.25
+    AF[2,1]=0.25
+    AF[3,0]=0.25
+    AF[3,1]=0.25
+    AF[3,2]=0.5
+    bF=np.zeros((4))
+    bF[0]=1/4.
+    bF[1]=1/4.
+    bF[2]=1/4.
+    bF[3]=1/4.
+    cF=np.sum(AF,1)
+  
+
+    AS=np.zeros((4,4))
+    AS[1,0]=1.
+    AS[3,2]=1.
+    bS=np.zeros((4))
+    bS=bF[:]
+    cS=np.sum(AS,1)
+
+    AT=np.zeros((4,4))
+    AT[3,0]=0.
+    AT[3,1]=0.
+    AT[3,2]=0.
+    AT[3,3]=1.0
+    bT=np.zeros((4))
+    bT[3]=1.
+    cT=np.sum(AT,1)
+
+    
+    IMEX_MRK['type']='IMEX-MRK'
+    IMEX_MRK['AB']=AB
+    IMEX_MRK['bB']=bB
+    IMEX_MRK['cB']=cB
+    IMEX_MRK['sB']=np.size(bB)
+    IMEX_MRK['pB']=2
+
+    IMEX_MRK['AF']=AF
+    IMEX_MRK['bF']=bF
+    IMEX_MRK['cF']=cF
+    IMEX_MRK['sF']=np.size(bF)
+    IMEX_MRK['pF']=2
+
+    IMEX_MRK['AS']=AS
+    IMEX_MRK['bS']=bS
+    IMEX_MRK['cS']=cS
+    IMEX_MRK['sS']=np.size(bS)
+    IMEX_MRK['pS']=2
+
+    IMEX_MRK['AT']=AT
+    IMEX_MRK['bT']=bT
+    IMEX_MRK['cT']=cT
+    IMEX_MRK['sT']=np.size(bT)
+    IMEX_MRK['pT']=2
+    IMEX_MRK['name']='MPRK2-IMEX-BE-NC'
+    AllMethods_IMEX_MRK.append(IMEX_MRK)
+
     # MPRK2 - IMEX
     IMEX_MRK={}
 
