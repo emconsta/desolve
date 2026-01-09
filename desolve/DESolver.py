@@ -2,15 +2,15 @@ import numpy as np
 from scipy.optimize import fsolve
 import scipy
 
-from methods_rk import Default_RK_Methods
-from methods_etrs import Default_ETRS_Methods
-from methods_ark import Default_ARK_Methods
-from methods_esdirk import Default_ESDIRK_Methods
-from methods_glee import Default_GLEE_Methods
-from methods_glee_eimex import Default_GLEE_EIMEX_Methods
-from methods_ide import Default_IDE_Methods
-from methods_mrk import Default_MRK_Methods
-from methods_imex_mrk import Default_IMEX_MRK_Methods
+from .methods_rk import Default_RK_Methods
+from .methods_etrs import Default_ETRS_Methods
+from .methods_ark import Default_ARK_Methods
+from .methods_esdirk import Default_ESDIRK_Methods
+from .methods_glee import Default_GLEE_Methods
+from .methods_glee_eimex import Default_GLEE_EIMEX_Methods
+from .methods_ide import Default_IDE_Methods
+from .methods_mrk import Default_MRK_Methods
+from .methods_imex_mrk import Default_IMEX_MRK_Methods
 
 class DESolver:
     """

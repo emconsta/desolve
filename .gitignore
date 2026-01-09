@@ -1,0 +1,23 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+
+# Packaging artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor noise
+.DS_Store
+*~
+*.swp
+*.swo
+

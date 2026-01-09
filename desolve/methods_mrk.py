@@ -1,5 +1,6 @@
 import numpy as np
-from methods_rk import Default_RK_Methods
+
+from .methods_rk import Default_RK_Methods
 
 
 def Default_MRK_Methods():
@@ -139,4 +140,3 @@ def Default_MRK_Methods():
 
     
     return AllMethods_MRK
-
