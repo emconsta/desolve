@@ -21,3 +21,5 @@ venv/
 *.swp
 *.swo
 
+# Local-only agent instructions
+/AGENTS.md
