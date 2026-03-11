@@ -1,0 +1,129 @@
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/newsreader/400.css";
+@import "@fontsource/newsreader/600.css";
+@import "@fontsource/newsreader/700.css";
+
+:root {
+  --sl-color-accent-low: #31130b;
+  --sl-color-accent: #ef4444;
+  --sl-color-accent-high: #fecaca;
+  --desolve-paper: #fff9f1;
+  --desolve-ink: #111827;
+  --desolve-grid: rgba(148, 163, 184, 0.12);
+  --desolve-glow: rgba(251, 113, 133, 0.22);
+}
+
+:root[data-theme="light"] {
+  --sl-color-bg: #fffdf8;
+  --sl-color-bg-nav: rgba(255, 250, 245, 0.82);
+  --sl-color-bg-sidebar: #fffaf3;
+  --sl-color-hairline-light: rgba(15, 23, 42, 0.08);
+  --sl-color-text: #1f2937;
+  --sl-color-text-accent: #b91c1c;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-bg: #09111c;
+  --sl-color-bg-nav: rgba(9, 17, 28, 0.8);
+  --sl-color-bg-sidebar: #0d1727;
+  --sl-color-hairline-light: rgba(248, 250, 252, 0.08);
+  --sl-color-text: #e5eefc;
+  --sl-color-text-accent: #fca5a5;
+}
+
+body {
+  font-family: "Newsreader", Georgia, serif;
+  background:
+    radial-gradient(circle at top right, var(--desolve-glow), transparent 30rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 18rem),
+    var(--sl-color-bg);
+  color: var(--sl-color-text);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--desolve-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--desolve-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 75%);
+}
+
+:where(h1, h2, h3, h4, h5, h6, .site-title, .hero .title, .sl-link-button) {
+  font-family: "Space Grotesk", "Avenir Next", sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 2rem;
+  background:
+    linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(15, 118, 110, 0.16)),
+    rgba(255, 255, 255, 0.03);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.16);
+  padding: clamp(1.5rem, 2vw, 2rem);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -40% auto;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent 70%);
+  filter: blur(16px);
+}
+
+.hero img {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+.hero .tagline {
+  max-width: 38rem;
+  font-size: clamp(1.1rem, 1.9vw, 1.35rem);
+  line-height: 1.5;
+}
+
+.sl-link-button {
+  border-radius: 999px;
+  padding-inline: 1rem 1.2rem;
+}
+
+.card,
+.sl-markdown-content :where(.card) {
+  border-radius: 1.25rem;
+  border: 1px solid var(--sl-color-hairline-light);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.sl-markdown-content blockquote {
+  border-inline-start-color: var(--sl-color-accent);
+  background: rgba(249, 115, 22, 0.08);
+  border-radius: 0 1rem 1rem 0;
+}
+
+.sl-markdown-content code:not(pre code) {
+  border-radius: 0.5rem;
+  background: rgba(148, 163, 184, 0.14);
+  padding: 0.12rem 0.4rem;
+}
+
+.sl-markdown-content pre {
+  border-radius: 1rem;
+  border: 1px solid var(--sl-color-hairline-light);
+}
+
+.pagination-links a {
+  border-radius: 1rem;
+}

@@ -1,0 +1,91 @@
+---
+import "../styles/custom.css";
+
+const homeHref = "/desolve/";
+const gettingStartedHref = "/desolve/guides/getting-started/";
+const methodsHref = "/desolve/methods/overview/";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Page not found | DESolve</title>
+    <meta
+      name="description"
+      content="The requested page could not be found in the DESolve documentation."
+    />
+  </head>
+  <body>
+    <main class="desolve-404-shell">
+      <section class="desolve-404-card">
+        <p class="desolve-404-kicker">404</p>
+        <h1>That page does not exist.</h1>
+        <p>
+          The documentation path may have changed, or the link points to content
+          that was removed during the GitHub migration.
+        </p>
+        <div class="desolve-404-actions">
+          <a href={homeHref}>Documentation home</a>
+          <a href={gettingStartedHref}>Getting started</a>
+          <a href={methodsHref}>Method overview</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
+
+<style>
+  .desolve-404-shell {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+  }
+
+  .desolve-404-card {
+    max-width: 44rem;
+    border-radius: 2rem;
+    border: 1px solid var(--sl-color-hairline-light);
+    background:
+      linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(15, 118, 110, 0.14)),
+      rgba(255, 255, 255, 0.04);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
+    padding: clamp(2rem, 4vw, 3rem);
+  }
+
+  .desolve-404-kicker {
+    margin: 0 0 0.75rem;
+    color: var(--sl-color-text-accent);
+    font-family: "Space Grotesk", "Avenir Next", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+  }
+
+  h1 {
+    margin-bottom: 0.75rem;
+  }
+
+  p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+
+  .desolve-404-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-top: 1.5rem;
+  }
+
+  .desolve-404-actions a {
+    border-radius: 999px;
+    border: 1px solid var(--sl-color-hairline-light);
+    color: inherit;
+    font-family: "Space Grotesk", "Avenir Next", sans-serif;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+  }
+</style>

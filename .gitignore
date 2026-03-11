@@ -12,6 +12,11 @@ dist/
 .venv/
 venv/
 
+# Docs site artifacts
+site/node_modules/
+site/dist/
+site/.astro/
+
 # Jupyter
 .ipynb_checkpoints/
 
@@ -23,3 +28,4 @@ venv/
 
 # Local-only agent instructions
 /AGENTS.md
+/last.sh

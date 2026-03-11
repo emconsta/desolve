@@ -1,0 +1,68 @@
+---
+title: DESolve
+description: Research-grade time integration methods for ODEs and semi-discrete PDEs.
+template: splash
+editUrl: false
+hero:
+  title: "DESolve for ambitious time-integration experiments"
+  tagline: "A compact Python codebase for exploring Runge-Kutta, ESDIRK, ARK, GLEE, MRK, and IMEX methods without dragging a heavyweight framework behind every numerical idea."
+  image:
+    alt: Abstract wavefront illustration representing numerical integration methods.
+    file: ../../assets/hero-wave.svg
+  actions:
+    - text: Read the setup guide
+      link: /desolve/guides/getting-started/
+      icon: right-arrow
+    - text: Explore the methods
+      link: /desolve/methods/overview/
+      icon: rocket
+    - text: View source on GitHub
+      link: https://github.com/emconsta/desolve
+      icon: external
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+<CardGrid stagger>
+  <Card title="Research-first" icon="seti:book-stack">
+    DESolve is small enough to understand quickly and flexible enough to support
+    method-table experimentation, notebook workflows, and solver hacking.
+  </Card>
+  <Card title="Broad method coverage" icon="seti:graph-line">
+    The library ships method families for classic RK, ESDIRK, ARK, GLEE,
+    extrapolation-style ideas, and multirate IMEX variants.
+  </Card>
+  <Card title="Simple problem interface" icon="seti:function">
+    Right-hand sides follow a consistent `(t, u, ctx) -> (f, jac)` signature,
+    which keeps numerical experiments explicit and easy to audit.
+  </Card>
+  <Card title="Notebook-friendly" icon="seti:play">
+    The repository includes reference problems, experiments, and plots used to
+    test ideas and reproduce numerical behavior.
+  </Card>
+</CardGrid>
+
+## Start in the right place
+
+<CardGrid>
+  <LinkCard title="Getting started" href="/desolve/guides/getting-started/" />
+  <LinkCard title="Solver workflow" href="/desolve/guides/solver-workflow/" />
+  <LinkCard title="Method overview" href="/desolve/methods/overview/" />
+  <LinkCard title="Notebook examples" href="/desolve/examples/notebooks/" />
+</CardGrid>
+
+## Why this project feels different
+
+DESolve is not trying to be a batteries-included scientific platform. It is a
+focused solver codebase that exposes method registration and stepping logic
+directly enough for numerical method development.
+
+That makes it a strong fit when you want to:
+
+- prototype or compare integration methods without a deep framework layer
+- inspect how specific method tables are registered and consumed
+- connect reference ODE and PDE problems to lightweight notebooks
+- keep the jump from paper idea to executable experiment short
+
+> If you are studying or designing time integrators, this codebase is meant to
+> stay close to the mathematics instead of hiding it behind too much machinery.

@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "desolve"
+version = "0.0.1"
+description = "Research-oriented time-integration methods for ODEs and semi-discrete PDEs."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Emil Constantinescu", email = "emconsta101@gmail.com" },
+]
+keywords = [
+    "ode",
+    "pde",
+    "time-integration",
+    "runge-kutta",
+    "imex",
+    "numerics",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "pytest",
+]
+notebooks = [
+    "ipykernel",
+    "jupyterlab",
+    "matplotlib",
+]
+
+[project.urls]
+Homepage = "https://github.com/emconsta/desolve"
+Repository = "https://github.com/emconsta/desolve"
+Issues = "https://github.com/emconsta/desolve/issues"
+
+[tool.setuptools.packages.find]
+include = ["desolve*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

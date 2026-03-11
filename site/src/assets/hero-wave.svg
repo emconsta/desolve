@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" role="img" aria-labelledby="title desc">
+  <title id="title">Abstract DESolve hero illustration</title>
+  <desc id="desc">Layered wavefront curves and highlighted solver nodes.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#101826" />
+      <stop offset="45%" stop-color="#1d3557" />
+      <stop offset="100%" stop-color="#0f766e" />
+    </linearGradient>
+    <linearGradient id="waveA" x1="0%" x2="100%" y1="0%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+    <linearGradient id="waveB" x1="0%" x2="100%" y1="0%" y2="0%">
+      <stop offset="0%" stop-color="#fca5a5" />
+      <stop offset="100%" stop-color="#67e8f9" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="720" height="520" rx="40" fill="url(#bg)" />
+  <g opacity="0.12">
+    <circle cx="590" cy="80" r="150" fill="#f97316" />
+    <circle cx="120" cy="420" r="180" fill="#14b8a6" />
+  </g>
+  <g fill="none" stroke-linecap="round">
+    <path d="M70 365C170 260 245 205 350 200s175 48 300 10" stroke="url(#waveA)" stroke-width="16" />
+    <path d="M70 310C175 220 255 175 355 168s182 38 295 -18" stroke="url(#waveB)" stroke-width="10" opacity="0.95" />
+    <path d="M70 420C160 330 255 295 355 292s182 36 295 -10" stroke="#f8fafc" stroke-opacity="0.35" stroke-width="5" />
+  </g>
+  <g filter="url(#glow)">
+    <circle cx="182" cy="303" r="14" fill="#fef3c7" />
+    <circle cx="360" cy="188" r="16" fill="#ffffff" />
+    <circle cx="560" cy="223" r="13" fill="#ccfbf1" />
+  </g>
+  <g fill="#e2e8f0" font-family="monospace" font-size="24">
+    <text x="84" y="118">u'(t) = f(t, u)</text>
+    <text x="84" y="156">RK / ARK / ESDIRK / IMEX</text>
+  </g>
+</svg>
