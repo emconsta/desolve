@@ -45,3 +45,12 @@ When adding a method:
 2. Keep the naming consistent with the existing method registry.
 3. Register it in `_RegisterDefaultMethods()`.
 4. Add a small regression test or notebook reproduction.
+
+## Detailed IMEX-MRK notes
+
+The IMEX multirate methods have their own dedicated documentation page because
+their implementation uses four coupled tableaux (`AB`, `AF`, `AS`, `AT`) and
+maps directly onto the 2022 Applied Mathematics Letters paper that introduced
+the one-implicit-stage extension.
+
+See the [IMEX-MRK implementation notes](/desolve/methods/imex-mrk/).

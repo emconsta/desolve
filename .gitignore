@@ -17,6 +17,9 @@ site/node_modules/
 site/dist/
 site/.astro/
 
+# Local research/reference material
+reference_materials/
+
 # Jupyter
 .ipynb_checkpoints/
 

@@ -463,6 +463,35 @@ class Advection1D:
 
 
 class AdvectionDiffusion1D:
+    """One-dimensional periodic advection-diffusion example used for IMEX-MRK.
+
+    This class is the repository counterpart of the numerical example in
+
+        Emil M. Constantinescu,
+        "Implicit extensions of an explicit multirate Runge-Kutta scheme",
+        Applied Mathematics Letters 128 (2022), 107871.
+
+    It discretizes
+
+        u_t + (omega(x) u)_x = kappa u_xx
+
+    on a periodic one-dimensional grid.  In the paper the diffusion strength is
+    denoted by ``delta``; in this code the same parameter is stored as
+    ``problem_ctx['kappa']`` and passed to the implicit diffusion operator.
+
+    The explicit advective component is split into fast and slow spatial
+    partitions so it can be evolved by the IMEX-MRK and MRK solvers:
+
+    - ``rhs_e_fast`` advances the fast half of the domain using ghost data from
+      the slow half.
+    - ``rhs_e_slow`` advances the slow half with the symmetric coupling.
+    - ``rhs_mr_implicit`` applies the single-rate periodic diffusion operator on
+      the full state.
+
+    The helper functions ``split_solution`` and ``merge_solution`` define the
+    two-block partition expected by ``DESolver`` when ``METHOD['type']`` is
+    ``'MRK'`` or ``'IMEX-MRK'``.
+    """
     def __init__(self,problem_ctx=None):
 
         self.rhs_i=None
@@ -577,6 +606,9 @@ class AdvectionDiffusion1D:
         
         #print(K)
         
+        # Periodic second-order finite-difference Laplacian used for the stiff
+        # diffusion part g(y).  The implicit solver in DESolver consumes both
+        # the action A u and the Jacobian A directly.
         A[0,0]=-2.
         A[0,1]=1.
         A[0,mx-1]=1.
@@ -621,6 +653,9 @@ class AdvectionDiffusion1D:
         uS_in=self.unvectorize_partition(uS_in,'S',ctx)
         uF_in=self.unvectorize_partition(uF_in,'F',ctx)
 
+        # The fast explicit operator uses boundary data from the slow partition
+        # so that the subcycled fast stages can exchange conservative fluxes
+        # across the interface.
         if(ctx['Flux_name']=='1stOrderUpwindFV'):
             y=np.hstack((np.reshape(uS_in[:,-1],(n,1)),uF_in,np.reshape(uS_in[:,0],(n,1))))
             c=np.hstack((np.reshape(cS[:,-1],(n,1)),cF,np.reshape(cS[:,0],(n,1))))
@@ -676,6 +711,9 @@ class AdvectionDiffusion1D:
         uS_in=self.unvectorize_partition(uS_in,'S',ctx)
         uF_in=self.unvectorize_partition(uF_in,'F',ctx)
         
+        # The slow explicit operator mirrors rhs_e_fast on the complementary
+        # partition, again reconstructing periodic ghost values from the fast
+        # state so the split advection operator is consistent across the cut.
         if(ctx['Flux_name']=='1stOrderUpwindFV'):
             y=np.hstack((np.reshape(uF_in[:,-1],(n,1)),uS_in,np.reshape(uF_in[:,0],(n,1))))
             c=np.hstack((np.reshape(cF[:,-1],(n,1)),cS,np.reshape(cF[:,0],(n,1))))
@@ -793,6 +831,8 @@ class AdvectionDiffusion1D:
         return u_pde
 
     def split_solution(self,u_ode):
+        # The MRK/IMEX-MRK implementation assumes a contiguous fast block
+        # followed by a contiguous slow block in the vectorized state.
         nF=self._nF
         nS=self._nS
         mx=self._mx
@@ -803,6 +843,8 @@ class AdvectionDiffusion1D:
         return uF_ode,uS_ode
 
     def merge_solution(self,uF_ode,uS_ode):
+        # Inverse of split_solution(): rebuild the full state vector after stage
+        # evaluations or implicit solves on the merged system.
         nF=self._nF
         nS=self._nS
         mx=self._mx

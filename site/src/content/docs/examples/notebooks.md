@@ -15,6 +15,9 @@ The `notebooks/` directory contains the exploratory side of the project:
 - Lorenz and other dynamical-system examples
 - generated figures used in talks or paper drafts
 
+For the IMEX multirate paper specifically, see the dedicated
+[advection-diffusion paper example](/desolve/examples/advection-diffusion-paper/).
+
 ## Recommended practice
 
 If you are extending the notebooks:
