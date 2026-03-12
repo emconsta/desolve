@@ -11,11 +11,32 @@ export default defineConfig({
             description: "Research-oriented time integration methods for ODEs and semi-discrete PDEs.",
             disable404Route: true,
             favicon: "/favicon.svg",
+            head: [
+                {
+                    tag: "meta",
+                    attrs: {
+                        name: "author",
+                        content: "Emil M. Constantinescu"
+                    }
+                },
+                {
+                    tag: "meta",
+                    attrs: {
+                        name: "citation_author",
+                        content: "Emil M. Constantinescu"
+                    }
+                }
+            ],
             social: [
                 {
                     icon: "github",
                     label: "GitHub",
                     href: "https://github.com/emconsta/desolve"
+                },
+                {
+                    icon: "external",
+                    label: "Author website",
+                    href: "https://emconsta.github.io/"
                 }
             ],
             customCss: ["./src/styles/custom.css"],

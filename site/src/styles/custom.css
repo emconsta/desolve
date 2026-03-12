@@ -99,6 +99,19 @@ body::before {
   padding-inline: 1rem 1.2rem;
 }
 
+.author-note {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.author-note a {
+  font-weight: 600;
+}
+
 .card,
 .sl-markdown-content :where(.card) {
   border-radius: 1.25rem;

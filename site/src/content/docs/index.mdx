@@ -16,12 +16,21 @@ hero:
     - text: Explore the methods
       link: /desolve/methods/overview/
       icon: rocket
+    - text: Visit the author's website
+      link: https://emconsta.github.io/
+      icon: external
     - text: View source on GitHub
       link: https://github.com/emconsta/desolve
       icon: external
 ---
 
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+<p className="author-note">
+  Created and maintained by <strong>Emil M. Constantinescu</strong>. For papers,
+  research context, and related projects, visit
+  <a href="https://emconsta.github.io/"> emconsta.github.io</a>.
+</p>
 
 <CardGrid stagger>
   <Card title="Research-first" icon="seti:book-stack">
