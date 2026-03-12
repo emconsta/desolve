@@ -11,6 +11,7 @@ from .methods_glee_eimex import Default_GLEE_EIMEX_Methods
 from .methods_ide import Default_IDE_Methods
 from .methods_mrk import Default_MRK_Methods
 from .methods_imex_mrk import Default_IMEX_MRK_Methods
+from .methods_symplectic import Default_Symplectic_Methods
 
 class DESolver:
     """
@@ -34,6 +35,8 @@ class DESolver:
         self._rhs_e = None
         self._rhs_i = None
         self._rhs_gint = None
+        self._rhs_symplectic_drift = None
+        self._rhs_symplectic_kick = None
 
         
 
@@ -113,6 +116,8 @@ class DESolver:
         self._perf_count_rhs_e = 0
         self._perf_count_rhs_i = 0
         self._perf_count_rhs_gint = 0
+        self._perf_count_rhs_symplectic_drift = 0
+        self._perf_count_rhs_symplectic_kick = 0
 
         pass
     
@@ -215,6 +220,15 @@ class DESolver:
                     A_method['name'], A_method['type']))
             self._methods[A_method['name']] = A_method
             self._method_set.append(A_method['name'])
+
+        AllMethods_SYMPLECTIC = Default_Symplectic_Methods()
+        for i in range(len(AllMethods_SYMPLECTIC)):
+            A_method = AllMethods_SYMPLECTIC[i]
+            if(self._info >= 1):
+                print('registering {:} of type {:}'.format(
+                    A_method['name'], A_method['type']))
+            self._methods[A_method['name']] = A_method
+            self._method_set.append(A_method['name'])
             
     def _compound_imex_rhs(self, tt, uu, ctx=None):
 
@@ -227,6 +241,33 @@ class DESolver:
             J_out = J_ex+J_im
 
         return u_out, J_out
+
+    def _symplectic_split_solution(self, u_in):
+        """Split the state into canonical position and momentum blocks."""
+        if(self._function_context is not None and 'SplitSolution' in self._function_context):
+            q_in, p_in = self._function_context['SplitSolution'](u_in)
+            return np.asarray(q_in), np.asarray(p_in)
+
+        if(u_in.size % 2 != 0):
+            raise NameError(
+                'Symplectic methods require an even-sized state vector or SplitSolution/MergeSolution callbacks in the function context.')
+
+        half = u_in.size//2
+        return u_in[0:half], u_in[half:]
+
+    def _symplectic_merge_solution(self, q_in, p_in):
+        """Merge canonical position and momentum blocks back into one state."""
+        if(self._function_context is not None and 'MergeSolution' in self._function_context):
+            return self._function_context['MergeSolution'](q_in, p_in)
+
+        return np.concatenate((np.asarray(q_in), np.asarray(p_in)))
+
+    def _evaluate_symplectic_component(self, rhs_component, tt, qq, pp):
+        """Accept either ``f`` or ``(f, jac)`` returns for drift/kick callbacks."""
+        out = rhs_component(tt, qq, pp, self._function_context)
+        if(isinstance(out, tuple)):
+            return out[0]
+        return out
 
     def setup(self,keep_history=True):
         self._RegisterDefaultMethods()
@@ -822,6 +863,45 @@ class DESolver:
                 plt.plot(u_out)
                 plt.title('Done with the step')
                 plt.show()
+        elif(METHOD['type'] == 'SYMPLECTIC'):
+            if(self._rhs_symplectic_drift is None or self._rhs_symplectic_kick is None):
+                raise NameError(
+                    'symplectic_drift and symplectic_kick need to be defined in order to use explicit symplectic integrators.')
+
+            a = METHOD['a']
+            b = METHOD['b']
+            s = METHOD['s']
+
+            # The stored coefficients follow the paper notation
+            #
+            #   p_i = p_{i-1} + b_i h F(q_{i-1})
+            #   q_i = q_{i-1} + a_i h P(p_i)
+            #
+            # so every method is advanced by the same kick-then-drift loop and
+            # different familiar variants only differ through zero or nonzero
+            # end coefficients.
+            q_out, p_out = self._symplectic_split_solution(u_in)
+            q_out = np.array(q_out, copy=True)
+            p_out = np.array(p_out, copy=True)
+
+            for istage in range(s):
+                if(self._info >= 2):
+                    print('Symplectic stage {:d}: b={:}, a={:}'.format(
+                        istage, b[istage], a[istage]))
+
+                if(b[istage] != 0.0):
+                    dpdt = self._evaluate_symplectic_component(
+                        self._rhs_symplectic_kick, t, q_out, p_out)
+                    p_out = p_out+dt*b[istage]*dpdt
+                    self._perf_count_rhs_symplectic_kick += 1
+
+                if(a[istage] != 0.0):
+                    dqdt = self._evaluate_symplectic_component(
+                        self._rhs_symplectic_drift, t, q_out, p_out)
+                    q_out = q_out+dt*a[istage]*dqdt
+                    self._perf_count_rhs_symplectic_drift += 1
+
+            u_out = self._symplectic_merge_solution(q_out, p_out)
         elif(METHOD['type'] == 'RK'):
             A = METHOD['A']
             b = METHOD['b']
@@ -1099,6 +1179,9 @@ class DESolver:
                 self._rhs_slow = rhs['mr_explicit_slow']
             if('mr_implicit' in rhs.keys()):
                 self._rhs_mr_implicit = rhs['mr_implicit']
+            if('symplectic_drift' in rhs.keys() and 'symplectic_kick' in rhs.keys()):
+                self._rhs_symplectic_drift = rhs['symplectic_drift']
+                self._rhs_symplectic_kick = rhs['symplectic_kick']
         
         else:
             self._rhs = rhs
@@ -1260,6 +1343,20 @@ class DESolver:
             print(bT)
             print('ct =') 
             print(cT)
+
+        elif(METHOD['type'] == 'SYMPLECTIC'):
+            a = METHOD['a']
+            b = METHOD['b']
+
+            print('Selected method type: {:}'.format(METHOD['type']))
+            print('Method coefficients:')
+
+            print('a =')
+            print(a)
+            print('b =')
+            print(b)
+            if('quadratic_kinetic_only' in METHOD and METHOD['quadratic_kinetic_only']):
+                print('Note: published order applies to quadratic kinetic energy problems.')
 
         elif(METHOD['type'] == 'RK'):
             A = METHOD['A']

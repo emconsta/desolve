@@ -8,6 +8,8 @@ def ProblemsODE(name,problem_ctx=None):
     
     if re.match(r'\ACos( )*(_|-)*Sine( )*(_|-)*1D\Z',name,re.IGNORECASE):
         problem = Cos_Sine_OneD(problem_ctx)      
+    elif re.match(r'\AHarmonic( )*(_|-)*Oscillator\Z',name,re.IGNORECASE):
+        problem = HarmonicOscillator(problem_ctx)
     elif re.match(r'\APrince( )*(_|-)*1978( )*(_|-)*A\Z',name,re.IGNORECASE):
         problem = Prince1978A(problem_ctx)
     elif re.match(r'\AProthero( )*(_|-)*Robinson\Z',name,re.IGNORECASE):
@@ -75,6 +77,110 @@ class Cos_Sine_OneD():
     
     def get_problem_setup(self):
         return (self.problem_setup)
+
+
+class HarmonicOscillator():
+    """Separable Hamiltonian test problem with both full and split RHS forms.
+
+    The Hamiltonian is
+
+        H(q, p) = 0.5 * p^2 + 0.5 * omega^2 * q^2
+
+    so the canonical equations are
+
+        q' = p,
+        p' = -omega^2 q.
+
+    The class deliberately exposes two compatible interfaces:
+
+    - ``rhs_e(t, u, ctx)`` returns the full two-component vector field, which
+      lets standard explicit methods such as ``RK4`` solve the same problem.
+    - ``get_symplectic_rhs()`` returns the drift/kick split expected by the new
+      symplectic table-driven methods.
+    """
+
+    def __init__(self, problem_ctx=None):
+        self.rhs_i = None
+
+        if(problem_ctx is None):
+            ctx = {'omega': 1.0}
+        else:
+            ctx = {'omega': problem_ctx['omega']}
+
+        self.u_ini = np.zeros((2,), dtype=np.float64)
+        self.u_ini[0] = 1.0
+        self.u_ini[1] = 0.0
+
+        problem_setup = {}
+        problem_setup['name'] = 'HarmonicOscillator'
+        problem_setup['context'] = ctx
+        problem_setup['context']['data-type'] = np.float64
+        problem_setup['context']['SplitSolution'] = self.split_solution
+        problem_setup['context']['MergeSolution'] = self.merge_solution
+        problem_setup['DT'] = 5.0e-02
+        problem_setup['DT_REFERENCE'] = 1.0e-04
+        problem_setup['T_DURATION'] = {'start': 0., 'end': 10.}
+        problem_setup['DT_INTERVAL'] = {'start': 1.0e-02, 'end': 2.0e-01}
+
+        self.problem_setup = problem_setup
+
+    def split_solution(self, u_in):
+        return u_in[0:1], u_in[1:2]
+
+    def merge_solution(self, q_in, p_in):
+        return np.concatenate((q_in, p_in))
+
+    def rhs_e(self, t, u_in, ctx=None):
+        omega = ctx['omega']
+        q_in, p_in = self.split_solution(u_in)
+
+        u_out = np.zeros((2,), dtype=ctx['data-type'])
+        u_out[0] = p_in[0]
+        u_out[1] = -(omega**2) * q_in[0]
+
+        j_out = np.zeros((2, 2), dtype=ctx['data-type'])
+        j_out[0, 1] = 1.0
+        j_out[1, 0] = -(omega**2)
+        return u_out, j_out
+
+    def rhs_symplectic_drift(self, t, q_in, p_in, ctx=None):
+        dqdt = np.zeros(q_in.shape, dtype=ctx['data-type'])
+        dqdt[:] = p_in
+        return dqdt, None
+
+    def rhs_symplectic_kick(self, t, q_in, p_in, ctx=None):
+        omega = ctx['omega']
+        dpdt = np.zeros(p_in.shape, dtype=ctx['data-type'])
+        dpdt[:] = -(omega**2) * q_in
+        return dpdt, None
+
+    def get_symplectic_rhs(self):
+        return {
+            'symplectic_drift': self.rhs_symplectic_drift,
+            'symplectic_kick': self.rhs_symplectic_kick,
+        }
+
+    def initial_solution(self):
+        return self.u_ini
+
+    def get_problem_setup(self):
+        return self.problem_setup
+
+    def exact_solution(self, t, ctx=None):
+        omega = ctx['omega']
+        q0 = self.u_ini[0]
+        p0 = self.u_ini[1]
+
+        if(isinstance(t, np.ndarray)):
+            u = np.zeros((2, len(t)), dtype=ctx['data-type'])
+            u[0, :] = q0 * np.cos(omega * t) + (p0 / omega) * np.sin(omega * t)
+            u[1, :] = p0 * np.cos(omega * t) - omega * q0 * np.sin(omega * t)
+            return u
+        else:
+            u = np.zeros((2,), dtype=ctx['data-type'])
+            u[0] = q0 * np.cos(omega * t) + (p0 / omega) * np.sin(omega * t)
+            u[1] = p0 * np.cos(omega * t) - omega * q0 * np.sin(omega * t)
+            return u
 
 class Prince1978A:
     def __init__(self,problem_ctx=None):

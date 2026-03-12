@@ -11,6 +11,7 @@ DESolve organizes time integrators by method-table modules. The main families in
 the repository are:
 
 - `methods_rk.py` for explicit Runge-Kutta schemes
+- `methods_symplectic.py` for explicit symplectic splitting methods
 - `methods_esdirk.py` for singly diagonally implicit RK variants
 - `methods_ark.py` for additive Runge-Kutta methods
 - `methods_glee.py` and `methods_glee_eimex.py` for GLEE-related methods
@@ -33,6 +34,8 @@ From a user perspective, that means two things:
 Use this rough rule of thumb:
 
 - start with `RK4` for simple explicit baselines
+- use the symplectic family for separable Hamiltonian systems when long-time
+  phase-space structure matters
 - move to ESDIRK or ARK variants when stiffness or splitting matters
 - use IMEX and multirate methods when you want explicit/implicit separation or
   multiple time scales
@@ -54,3 +57,12 @@ maps directly onto the 2022 Applied Mathematics Letters paper that introduced
 the one-implicit-stage extension.
 
 See the [IMEX-MRK implementation notes](/desolve/methods/imex-mrk/).
+
+## Symplectic notes
+
+The new symplectic family uses the paper-style drift and kick coefficient tables
+`a` and `b` rather than a Runge-Kutta tableau. The dedicated page shows how to
+solve the same harmonic-oscillator problem with either `RK4` or a symplectic
+composition method.
+
+See the [symplectic methods page](/desolve/methods/symplectic/).
