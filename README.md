@@ -118,7 +118,11 @@ Notes:
 - `desolve/methods_*.py`: method coefficient tables.
 - `desolve/problems_ODEs.py` and `desolve/problems_PDEs.py`: reference
   problems and semi-discretizations used by the notebooks.
-- `notebooks/`: experiments, examples, and generated figures.
+- `notebooks/`: curated example notebooks kept in the distribution.
+- `reproducibility/Constantinescu_2021/`: IMEX-MRK paper notebooks and figure
+  assets for the advection-diffusion study.
+- `notebooks/research/`: local-only exploratory notebooks and generated
+  artifacts; ignored by Git.
 
 ## License
 

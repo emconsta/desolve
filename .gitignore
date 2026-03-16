@@ -19,6 +19,7 @@ site/.astro/
 
 # Local research/reference material
 reference_materials/
+/notebooks/research/
 
 # Jupyter
 .ipynb_checkpoints/

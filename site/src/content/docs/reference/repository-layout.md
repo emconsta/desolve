@@ -14,7 +14,11 @@ sidebar:
 
 ## Research material
 
-- `notebooks/` contains experiments, figures, and exploratory work
+- `notebooks/` contains the curated example notebooks kept in the distribution
+- `reproducibility/Constantinescu_2021/` contains the IMEX-MRK paper notebooks
+  and generated figure assets
+- `notebooks/research/` is a local-only ignored area for exploratory notebooks
+  and artifacts
 - `tests/` is the place for regression tests as the automated suite grows
 
 ## Packaging and docs

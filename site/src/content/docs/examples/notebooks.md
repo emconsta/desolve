@@ -1,19 +1,19 @@
 ---
 title: Notebook experiments
-description: Where the repository keeps exploratory notebooks, plots, and numerical studies.
+description: How the repository separates curated notebooks, reproducibility material, and local-only research work.
 sidebar:
   order: 2
 ---
 
 ## Repository notebook workflow
 
-The `notebooks/` directory contains the exploratory side of the project:
+The repository now splits notebook material into three buckets:
 
-- method comparisons
-- convergence studies
-- advection, reaction, and diffusion experiments
-- Lorenz and other dynamical-system examples
-- generated figures used in talks or paper drafts
+- `notebooks/` contains the small curated example set kept in the distribution
+- `reproducibility/Constantinescu_2021/` contains the IMEX-MRK paper notebooks
+  and their generated figure assets
+- `notebooks/research/` is a local-only scratch area for exploratory notebooks
+  and generated artifacts and is ignored by Git
 
 For the IMEX multirate paper specifically, see the dedicated
 [advection-diffusion paper example](/desolve/examples/advection-diffusion-paper/).
@@ -22,9 +22,12 @@ For the IMEX multirate paper specifically, see the dedicated
 
 If you are extending the notebooks:
 
-- keep outputs minimal when possible
-- avoid committing temporary checkpoints or cache artifacts
-- move reusable logic back into the Python package when it stops being notebook-specific
+- keep `notebooks/` limited to small, reusable examples
+- put paper-specific workflows under `reproducibility/`
+- keep exploratory studies and generated artifacts under local-only
+  `notebooks/research/`
+- move reusable logic back into the Python package when it stops being
+  notebook-specific
 
 ## When to use notebooks vs. tests
 

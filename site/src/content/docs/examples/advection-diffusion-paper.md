@@ -50,10 +50,13 @@ Its responsibilities are:
 - expose full-rate and multirate right-hand sides in the signatures expected by
   `DESolver`
 
-The paper-oriented notebook workflows live in:
+The paper-oriented notebook workflows now live in:
 
-- `notebooks/TestMRIMEXAdvectionDiffusionPaper.ipynb`
-- `notebooks/TestMRIMEXAdvectionDiffusionPaperPlots.ipynb`
+- `reproducibility/Constantinescu_2021/TestMRIMEXAdvectionDiffusionPaper.ipynb`
+- `reproducibility/Constantinescu_2021/TestMRIMEXAdvectionDiffusionPaperPlots.ipynb`
+
+The generated figure assets from those notebooks are stored alongside them in
+the same reproducibility directory.
 
 ## The explicit-implicit split
 
@@ -196,7 +199,7 @@ If you want to follow the example from top to bottom in the code base:
 1. Read `desolve/methods_imex_mrk.py` for the coefficient tables.
 2. Read the IMEX-MRK branch in `desolve/DESolver.py`.
 3. Read `AdvectionDiffusion1D` in `desolve/problems_PDEs.py`.
-4. Open `notebooks/TestMRIMEXAdvectionDiffusionPaper.ipynb`.
+4. Open `reproducibility/Constantinescu_2021/TestMRIMEXAdvectionDiffusionPaper.ipynb`.
 
 That sequence moves from method design to solver implementation to the PDE
 experiment itself.
